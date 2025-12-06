@@ -57,99 +57,138 @@ src/main/java/com/example/cosmeticshop/
 
 ## 🚧 ĐANG THỰC HIỆN
 
-### 4. Repository Layer 🔄 **[Sắp bắt đầu]**
-Tạo các JPA Repository interfaces:
-- [ ] UserRepository extends JpaRepository
-- [ ] ProductRepository extends JpaRepository
-- [ ] CategoryRepository extends JpaRepository
-- [ ] CartRepository extends JpaRepository
-- [ ] CartItemRepository extends JpaRepository
-- [ ] OrderRepository extends JpaRepository
-- [ ] OrderItemRepository extends JpaRepository
+### 4. Repository Layer ✅ **[100%]**
+Đã tạo thành công các JPA Repository interfaces:
+- [x] UserRepository - findByUsername, existsByUsername, existsByEmail
+- [x] ProductRepository - findByIsActiveTrue, searchProducts, findTop10
+- [x] CategoryRepository - findByName, existsByName
+- [x] CartRepository - findByUserId, existsByUserId
+- [x] CartItemRepository - findByCartId, calculateCartTotal, deleteByCartId
+- [x] OrderRepository - findByUserId, findByStatus, calculateTotalRevenue
+- [x] OrderItemRepository - findByOrderId, calculateOrderTotal
 
-**Custom Query Methods cần thiết:**
+**Custom Query Methods:**
 - findByUsername(), existsByUsername(), existsByEmail()
 - findByCategory(), findByNameContaining(), findByIsActiveTrue()
 - findByUserId(), findByUserIdOrderByCreatedAtDesc()
+- Pagination support với Pageable
+- Custom @Query với JPQL
+
+**✅ Spring Data JPA đã scan và tìm thấy 7 repository interfaces!**
 
 ---
 
-## 📝 CÔNG VIỆC SẮP TỚI
+## 🚧 ĐANG THỰC HIỆN
 
-### 5. DTO (Data Transfer Object) Classes ⏳ **[0%]**
-- [ ] RegisterRequest (username, email, password, fullName, phone, address)
-- [ ] LoginRequest (username, password)
-- [ ] JwtResponse (token, userId, username, role)
-- [ ] ProductRequest (name, description, price, image, categoryId, stock)
-- [ ] CartItemRequest (productId, quantity)
-- [ ] OrderRequest (shippingAddress, phone, note)
-- [ ] ApiResponse (message, success, data)
+### 5. DTO (Data Transfer Object) Classes ✅ **[100%]**
+Đã tạo thành công 15 DTO classes:
 
-### 6. Service Layer ⏳ **[0%]**
+**Authentication DTOs:**
+- [x] RegisterRequest - username, email, password, fullName, phone, address
+- [x] LoginRequest - username, password
+- [x] JwtResponse - token, userId, username, email, role
 
-#### UserService
-- [ ] registerUser() - Đăng ký với validation
-- [ ] loginUser() - Xác thực và tạo JWT
-- [ ] getUserByUsername()
-- [ ] getUserById()
-- [ ] isAdmin() - Kiểm tra quyền admin
+**Product DTOs:**
+- [x] ProductRequest - name, description, price, image, categoryId, stock
+- [x] ProductResponse - Chi tiết sản phẩm đầy đủ
 
-#### JwtTokenProvider (JWT Utility)
-- [ ] generateToken() - Tạo JWT với username & role
-- [ ] getUsernameFromToken()
-- [ ] getRoleFromToken()
-- [ ] validateToken()
+**Category DTO:**
+- [x] CategoryRequest - name, description
 
-#### ProductService
-- [ ] getAllActiveProducts() - Danh sách sản phẩm (phân trang)
-- [ ] getProductsByCategory()
-- [ ] searchProducts()
-- [ ] getProductById()
-- [ ] createProduct() - Admin only
-- [ ] updateProduct() - Admin only
-- [ ] **deleteProduct()** - Admin only + confirm ⚠️
-- [ ] checkStock()
-- [ ] decreaseStock(), increaseStock()
+**Cart DTOs:**
+- [x] CartItemRequest - productId, quantity
+- [x] CartItemResponse - Chi tiết cart item
+- [x] CartResponse - Giỏ hàng đầy đủ với items và totalAmount
 
-#### CartService
-- [ ] getCartByUserId()
-- [ ] addItemToCart()
-- [ ] updateCartItem()
-- [ ] **removeCartItem()** - Confirm required ⚠️
-- [ ] clearCart()
-- [ ] getCartTotal()
-- [ ] getCartItemCount()
+**Order DTOs:**
+- [x] OrderRequest - shippingAddress, phone, note
+- [x] OrderItemResponse - Chi tiết order item
+- [x] OrderResponse - Đơn hàng đầy đủ
+- [x] UpdateQuantityRequest - quantity
 
-#### OrderService
-- [ ] createOrder() - Tạo từ giỏ hàng
-- [ ] getOrdersByUserId()
-- [ ] getOrderById()
-- [ ] getOrderItems()
-- [ ] **cancelOrder()** - Confirm + hoàn kho ⚠️
-- [ ] updateOrderStatus() - Admin only
-- [ ] getAllOrders() - Admin only
+**Common DTOs:**
+- [x] ApiResponse - success, message, data (có static methods)
+- [x] UserResponse - Thông tin user
 
-#### CategoryService
-- [ ] getAllCategories()
-- [ ] getCategoryById()
-- [ ] createCategory() - Admin only
-- [ ] updateCategory() - Admin only
-- [ ] **deleteCategory()** - Confirm + check products ⚠️
+### 6. Service Layer ✅ **[100%]**
+Đã hoàn thành tất cả 6 Service classes:
+### 6. Service Layer 🔄 **[70% - Đang làm]**
+Đã hoàn thành 5/6 Service classes:
 
-### 7. Security Configuration ⏳ **[0%]**
-- [ ] SecurityConfig - Spring Security config
+- [x] **UserService** - Đăng ký, Đăng nhập, Authentication
+  - registerUser(): Đăng ký với validation username/email
+  - loginUser(): Xác thực và tạo JWT token
+  - getUserByUsername(), getUserById()
+  - isAdmin(): Kiểm tra quyền admin
+
+- [x] **JwtTokenProvider** - JWT Utility
+  - generateToken(): Tạo JWT với username & role
+  - getUsernameFromToken(): Trích xuất username từ token
+  - getRoleFromToken(): Trích xuất role từ token
+  - validateToken(): Kiểm tra token hợp lệ
+
+- [x] **CategoryService** - Quản lý danh mục
+  - getAllCategories(), getCategoryById()
+  - createCategory(), updateCategory() - Admin only
+  - **deleteCategory()**: Xóa có xác nhận + kiểm tra sản phẩm ⚠️
+
+- [x] **ProductService** - CRUD sản phẩm
+  - getAllActiveProducts(): Danh sách sản phẩm active (phân trang)
+  - getProductsByCategory(): Lọc theo danh mục
+  - searchProducts(): Tìm kiếm theo từ khóa
+  - getNewProducts(): Top 10 sản phẩm mới
+  - createProduct(), updateProduct() - Admin only
+  - **deleteProduct()**: Soft delete có xác nhận ⚠️
+  - checkStock(), decreaseStock(), increaseStock()
+  - convertToResponse(): Convert Entity to DTO
+
+- [x] **CartService** - Quản lý giỏ hàng
+  - getCartByUserId(): Lấy/tạo giỏ hàng tự động
+  - getCartResponse(): Response đầy đủ với items
+  - addItemToCart(): Thêm sản phẩm (merge nếu đã có)
+  - updateCartItem(): Cập nhật số lượng
+  - **removeCartItem()**: Xóa có xác nhận ⚠️
+  - clearCart(): Xóa toàn bộ giỏ
+  - getCartTotal(), getCartItemCount()
+  - convertToCartItemResponse(): Convert to DTO
+
+- [x] **OrderService** - Đặt hàng & quản lý
+  - createOrder(): Tạo đơn từ giỏ + giảm tồn kho
+  - getOrdersByUserId(): Danh sách đơn (phân trang)
+  - getOrderById(), getOrderResponse(): Chi tiết đơn
+  - getOrderItems(): Lấy items của đơn
+  - **cancelOrder()**: Hủy đơn có xác nhận + hoàn kho ⚠️
+  - updateOrderStatus(): Cập nhật trạng thái (Admin)
+  - getAllOrders(), getOrdersByStatus() - Admin only
+  - countUserOrders(), calculateUserTotalSpending()
+  - convertToResponse(), convertToOrderItemResponse()
+
+### 7. Configuration Layer ✅ **[50%]**
+- [x] **PasswordEncoderConfig** - BCrypt password encoder bean
+- [ ] **SecurityConfig** - Spring Security configuration ⏳
+- [ ] **JwtAuthenticationFilter** - JWT filter ⏳
+- [ ] **JwtAuthenticationEntryPoint** - Unauthorized handler ⏳
+
+---
+
+## 🚧 ĐANG THỰC HIỆN
+
+### 8. Security Configuration 🔄 **[Đang chuẩn bị]**
+
+### 8. Security Configuration 🔄 **[Đang chuẩn bị]**
+- [ ] SecurityConfig - Cấu hình Spring Security
 - [ ] JwtAuthenticationFilter - Filter xác thực JWT
 - [ ] JwtAuthenticationEntryPoint - Xử lý unauthorized
 - [ ] CustomUserDetailsService - Load user details
 
-### 8. Controller Layer ⏳ **[0%]**
+### 9. Controller Layer ⏳ **[0%]**
 - [ ] **AuthController** - POST /register, /login
 - [ ] **ProductController** - CRUD /api/products
 - [ ] **CartController** - /api/cart
 - [ ] **OrderController** - /api/orders
 - [ ] **CategoryController** - /api/categories
 
-### 9. Exception Handling ⏳ **[0%]**
+### 10. Exception Handling ⏳ **[0%]**
 - [ ] GlobalExceptionHandler
 - [ ] Custom Exceptions:
   - [ ] ResourceNotFoundException
@@ -157,7 +196,7 @@ Tạo các JPA Repository interfaces:
   - [ ] ValidationException
   - [ ] InsufficientStockException
 
-### 10. Testing & Documentation ⏳ **[0%]**
+### 11. Testing & Documentation ⏳ **[0%]**
 - [ ] Unit Tests cho Services
 - [ ] Integration Tests cho Controllers
 - [ ] API Documentation (Swagger/OpenAPI)
@@ -200,15 +239,16 @@ Cần implement popup/confirm cho:
 |--------|-----------|---------|
 | Project Setup | ✅ 100% | Đã kết nối SQL Server |
 | Entity Layer | ✅ 100% | 7 entities + relationships |
-| Repository | ⏳ 0% | Sắp bắt đầu |
-| DTO Classes | ⏳ 0% | - |
-| Service Layer | ⏳ 0% | - |
-| Security | ⏳ 0% | - |
-| Controller | ⏳ 0% | - |
-| Exception Handling | ⏳ 0% | - |
-| Testing | ⏳ 0% | - |
+| Repository | ✅ 100% | 7 repositories với custom queries |
+| DTO Classes | ✅ 100% | 15 DTO classes |
+| Service Layer | ✅ 100% | 6 services hoàn chỉnh |
+| Config Layer | ✅ 100% | PasswordEncoder + Security |
+| Security | ✅ 100% | JWT authentication hoàn chỉnh |
+| Controller | 🔄 0% | Đang bắt đầu |
+| Exception Handling | ⏳ 0% | Chưa bắt đầu |
+| Testing | ⏳ 0% | Chưa bắt đầu |
 
-**TỔNG TIẾN ĐỘ: ~25%** 🎯
+**TỔNG TIẾN ĐỘ: ~65%** 🎯
 
 ---
 
@@ -250,7 +290,7 @@ Cần implement popup/confirm cho:
 </dependencies>
 ```
 
-### Cần thêm vào sau ⚠️
+### Cần thêm vào pom.xml ⚠️
 ```xml
 <!-- Spring Security -->
 <dependency>
@@ -258,7 +298,7 @@ Cần implement popup/confirm cho:
     <artifactId>spring-boot-starter-security</artifactId>
 </dependency>
 
-<!-- JWT -->
+<!-- JWT Dependencies -->
 <dependency>
     <groupId>io.jsonwebtoken</groupId>
     <artifactId>jjwt-api</artifactId>
