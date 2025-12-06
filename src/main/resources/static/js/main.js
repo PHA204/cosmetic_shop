@@ -1,247 +1,375 @@
-// ==========================================
-// CUSTOM JAVASCRIPT - Cosmetic Shop
-// File: src/main/resources/static/js/main.js
-// ==========================================
-
-$(document).ready(function() {
-    
-    // ========== Initialize Tooltips ==========
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-    
-    // ========== Auto-hide Alerts ==========
-    setTimeout(function() {
-        $('.alert').fadeOut('slow');
-    }, 5000);
-    
-    // ========== Confirm Delete ==========
-    $('.btn-delete').on('click', function(e) {
-        if (!confirm('Bạn có chắc chắn muốn xóa?')) {
-            e.preventDefault();
-        }
-    });
-    
-    // ========== Add to Cart Animation ==========
-    $('.btn-add-cart').on('click', function() {
-        var btn = $(this);
-        var originalText = btn.html();
-        
-        btn.html('<i class="bi bi-check-circle"></i> Đã thêm!');
-        btn.prop('disabled', true);
-        
-        setTimeout(function() {
-            btn.html(originalText);
-            btn.prop('disabled', false);
-        }, 2000);
-    });
-    
-    // ========== Quantity Counter ==========
-    $('.quantity-minus').on('click', function() {
-        var input = $(this).siblings('input');
-        var value = parseInt(input.val());
-        if (value > 1) {
-            input.val(value - 1);
-            updateCartItem(input);
-        }
-    });
-    
-    $('.quantity-plus').on('click', function() {
-        var input = $(this).siblings('input');
-        var value = parseInt(input.val());
-        var max = parseInt(input.attr('max')) || 999;
-        if (value < max) {
-            input.val(value + 1);
-            updateCartItem(input);
-        }
-    });
-    
-    // ========== Update Cart Item ==========
-    function updateCartItem(input) {
-        var itemId = input.data('item-id');
-        var quantity = input.val();
-        
-        // TODO: Gửi AJAX request để update cart
-        console.log('Update cart item:', itemId, 'quantity:', quantity);
-    }
-    
-    // ========== Search Bar ==========
-    $('#searchInput').on('keypress', function(e) {
-        if (e.which === 13) { // Enter key
-            var keyword = $(this).val();
-            if (keyword.trim()) {
-                window.location.href = '/products?search=' + encodeURIComponent(keyword);
-            }
-        }
-    });
-    
-    // ========== Image Preview ==========
-    $('#imageInput').on('change', function() {
-        var file = this.files[0];
-        if (file) {
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                $('#imagePreview').attr('src', e.target.result).show();
-            }
-            reader.readAsDataURL(file);
-        }
-    });
-    
-    // ========== Loading Overlay ==========
-    function showLoading() {
-        $('body').append('<div class="spinner-overlay"><div class="spinner-border text-light" role="status"></div></div>');
-    }
-    
-    function hideLoading() {
-        $('.spinner-overlay').remove();
-    }
-    
-    // ========== AJAX Form Submit ==========
-    $('.ajax-form').on('submit', function(e) {
-        e.preventDefault();
-        
-        showLoading();
-        
-        var form = $(this);
-        var url = form.attr('action');
-        var method = form.attr('method') || 'POST';
-        var data = form.serialize();
-        
-        $.ajax({
-            url: url,
-            method: method,
-            data: data,
-            success: function(response) {
-                hideLoading();
-                showMessage('Thành công!', 'success');
-                // Reload hoặc redirect
-                setTimeout(function() {
-                    location.reload();
-                }, 1000);
-            },
-            error: function(xhr) {
-                hideLoading();
-                var message = xhr.responseJSON ? xhr.responseJSON.message : 'Có lỗi xảy ra!';
-                showMessage(message, 'danger');
-            }
-        });
-    });
-    
-    // ========== Show Message ==========
-    function showMessage(message, type) {
-        var alertHtml = '<div class="alert alert-' + type + ' alert-dismissible fade show position-fixed top-0 end-0 m-3" role="alert" style="z-index: 9999;">' +
-            message +
-            '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
-            '</div>';
-        
-        $('body').append(alertHtml);
-        
-        setTimeout(function() {
-            $('.alert').fadeOut('slow', function() {
-                $(this).remove();
-            });
-        }, 5000);
-    }
-    
-    // ========== Format Currency ==========
-    function formatCurrency(amount) {
-        return new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND'
-        }).format(amount);
-    }
-    
-    // ========== Update Cart Badge ==========
-    function updateCartBadge() {
-        // TODO: Gọi API để lấy số lượng items trong cart
-        $.get('/api/cart/count', function(data) {
-            $('.cart-badge').text(data);
-        });
-    }
-    
-    // ========== Smooth Scroll ==========
-    $('a[href^="#"]').on('click', function(e) {
-        e.preventDefault();
-        var target = $(this.getAttribute('href'));
-        if (target.length) {
-            $('html, body').stop().animate({
-                scrollTop: target.offset().top - 70
-            }, 1000);
-        }
-    });
-    
-    // ========== Back to Top Button ==========
-    var backToTopButton = $('<button class="btn btn-primary btn-floating position-fixed bottom-0 end-0 m-3" style="display: none; z-index: 999;">' +
-        '<i class="bi bi-arrow-up"></i>' +
-        '</button>');
-    
-    $('body').append(backToTopButton);
-    
-    $(window).scroll(function() {
-        if ($(this).scrollTop() > 300) {
-            backToTopButton.fadeIn();
-        } else {
-            backToTopButton.fadeOut();
-        }
-    });
-    
-    backToTopButton.on('click', function() {
-        $('html, body').animate({scrollTop: 0}, 600);
-        return false;
-    });
-    
-    // ========== Dark Mode Toggle (Optional) ==========
-    $('#darkModeToggle').on('click', function() {
-        $('body').toggleClass('dark-mode');
-        localStorage.setItem('darkMode', $('body').hasClass('dark-mode'));
-    });
-    
-    // Load dark mode preference
-    if (localStorage.getItem('darkMode') === 'true') {
-        $('body').addClass('dark-mode');
-    }
-});
-
-// ========== Global Functions ==========
-
-// Add to Cart Function
+// Global function to add product to cart
 function addToCart(productId, quantity) {
+    // Check if user is authenticated
+    if (!isUserAuthenticated()) {
+        showMessage('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!', 'warning');
+        setTimeout(() => {
+            window.location.href = '/login';
+        }, 1500);
+        return;
+    }
+    
+    const cartData = {
+        productId: productId,
+        quantity: quantity || 1
+    };
+    
     $.ajax({
         url: '/api/cart/items',
         method: 'POST',
         contentType: 'application/json',
-        data: JSON.stringify({
-            productId: productId,
-            quantity: quantity || 1
-        }),
+        data: JSON.stringify(cartData),
         success: function(response) {
             showMessage('Đã thêm vào giỏ hàng!', 'success');
-            updateCartBadge();
+            
+            // Update cart count in navbar
+            if (typeof updateCartCount === 'function') {
+                updateCartCount();
+            }
+            
+            // Show cart notification with animation
+            showCartNotification();
         },
         error: function(xhr) {
-            var message = xhr.responseJSON ? xhr.responseJSON.message : 'Có lỗi xảy ra!';
+            let message = 'Có lỗi xảy ra!';
+            
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                message = xhr.responseJSON.message;
+            } else if (xhr.status === 401) {
+                message = 'Vui lòng đăng nhập!';
+                setTimeout(() => {
+                    window.location.href = '/login';
+                }, 1500);
+            }
+            
             showMessage(message, 'danger');
         }
     });
 }
 
-// Remove from Cart Function
-function removeFromCart(itemId) {
-    if (!confirm('Bạn có chắc muốn xóa sản phẩm này?')) {
-        return;
-    }
+// Check if user is authenticated (simple check for navbar)
+function isUserAuthenticated() {
+    // Check if cart link exists (only shown to authenticated users)
+    return $('#cartLink').length > 0;
+}
+
+// Show message alert
+function showMessage(message, type) {
+    // Remove existing alerts
+    $('.alert-notification').remove();
     
-    $.ajax({
-        url: '/api/cart/items/' + itemId + '?confirm=true',
-        method: 'DELETE',
-        success: function(response) {
-            showMessage('Đã xóa khỏi giỏ hàng!', 'success');
-            location.reload();
-        },
-        error: function(xhr) {
-            var message = xhr.responseJSON ? xhr.responseJSON.message : 'Có lỗi xảy ra!';
-            showMessage(message, 'danger');
-        }
+    const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3 alert-notification" 
+             role="alert" style="z-index: 9999; min-width: 300px;">
+            <strong>
+                ${type === 'success' ? '<i class="bi bi-check-circle"></i>' : 
+                  type === 'danger' ? '<i class="bi bi-x-circle"></i>' : 
+                  type === 'warning' ? '<i class="bi bi-exclamation-triangle"></i>' : 
+                  '<i class="bi bi-info-circle"></i>'}
+            </strong>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    $('body').append(alertHtml);
+    
+    // Auto dismiss after 5 seconds
+    setTimeout(() => {
+        $('.alert-notification').fadeOut(300, function() {
+            $(this).remove();
+        });
+    }, 5000);
+}
+
+// Show cart notification with icon animation
+function showCartNotification() {
+    const cartIcon = $('#cartLink i');
+    
+    if (cartIcon.length > 0) {
+        // Add bounce animation
+        cartIcon.addClass('animate-bounce');
+        
+        setTimeout(() => {
+            cartIcon.removeClass('animate-bounce');
+        }, 1000);
+    }
+}
+
+// Format currency to Vietnamese Dong
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('vi-VN').format(amount) + ' ₫';
+}
+
+// Format date
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN');
+}
+
+// Format datetime
+function formatDateTime(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleString('vi-VN');
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
+// Debounce function for search input
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Smooth scroll to top
+function scrollToTop() {
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
     });
 }
+
+// Show scroll to top button
+$(window).scroll(function() {
+    if ($(this).scrollTop() > 300) {
+        $('#scrollTopBtn').fadeIn();
+    } else {
+        $('#scrollTopBtn').fadeOut();
+    }
+});
+
+// Add scroll to top button on page load
+$(document).ready(function() {
+    // Add scroll to top button
+    if ($('#scrollTopBtn').length === 0) {
+        $('body').append(`
+            <button id="scrollTopBtn" 
+                    class="btn btn-primary rounded-circle position-fixed" 
+                    style="bottom: 20px; right: 20px; width: 50px; height: 50px; display: none; z-index: 1000;"
+                    onclick="scrollToTop()">
+                <i class="bi bi-arrow-up"></i>
+            </button>
+        `);
+    }
+    
+    // Add loading indicator styles if not exists
+    if ($('#loadingStyles').length === 0) {
+        $('head').append(`
+            <style id="loadingStyles">
+                .animate-bounce {
+                    animation: bounce 0.5s ease-in-out;
+                }
+                
+                @keyframes bounce {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                }
+                
+                .product-card {
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                }
+                
+                .product-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+                }
+                
+                .category-card {
+                    transition: all 0.3s ease;
+                }
+                
+                .category-card:hover {
+                    transform: scale(1.05);
+                    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+                }
+                
+                .btn-add-cart {
+                    transition: all 0.3s ease;
+                }
+                
+                .btn-add-cart:hover:not(:disabled) {
+                    transform: scale(1.05);
+                }
+                
+                .cart-item {
+                    transition: opacity 0.3s ease;
+                }
+                
+                .cart-item.removing {
+                    opacity: 0.5;
+                }
+                
+                .loading-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 9999;
+                }
+                
+                .loading-spinner {
+                    width: 3rem;
+                    height: 3rem;
+                }
+            </style>
+        `);
+    }
+});
+
+// Show loading overlay
+function showLoading() {
+    if ($('#loadingOverlay').length === 0) {
+        $('body').append(`
+            <div id="loadingOverlay" class="loading-overlay">
+                <div class="spinner-border text-light loading-spinner" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        `);
+    }
+}
+
+// Hide loading overlay
+function hideLoading() {
+    $('#loadingOverlay').fadeOut(300, function() {
+        $(this).remove();
+    });
+}
+
+// Confirm dialog wrapper
+function confirmDialog(message, callback) {
+    if (confirm(message)) {
+        callback();
+    }
+}
+
+// Copy to clipboard
+function copyToClipboard(text) {
+    const temp = $('<input>');
+    $('body').append(temp);
+    temp.val(text).select();
+    document.execCommand('copy');
+    temp.remove();
+    
+    showMessage('Đã copy vào clipboard!', 'success');
+}
+
+// Validate email
+function isValidEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+}
+
+// Validate phone number (Vietnamese)
+function isValidPhone(phone) {
+    const re = /^(0|\+84)[0-9]{9,10}$/;
+    return re.test(phone);
+}
+
+// Format number with thousand separator
+function formatNumber(number) {
+    return new Intl.NumberFormat('vi-VN').format(number);
+}
+
+// Truncate text
+function truncateText(text, length) {
+    if (text.length <= length) return text;
+    return text.substring(0, length) + '...';
+}
+
+// Get query parameter from URL
+function getQueryParam(param) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(param);
+}
+
+// Update URL parameter without reload
+function updateQueryParam(param, value) {
+    const url = new URL(window.location);
+    url.searchParams.set(param, value);
+    window.history.pushState({}, '', url);
+}
+
+// Remove URL parameter without reload
+function removeQueryParam(param) {
+    const url = new URL(window.location);
+    url.searchParams.delete(param);
+    window.history.pushState({}, '', url);
+}
+
+// Initialize tooltips (Bootstrap 5)
+function initTooltips() {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+}
+
+// Initialize popovers (Bootstrap 5)
+function initPopovers() {
+    const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+    popoverTriggerList.map(function (popoverTriggerEl) {
+        return new bootstrap.Popover(popoverTriggerEl);
+    });
+}
+
+// Handle image load error
+function handleImageError(img) {
+    img.onerror = null;
+    img.src = 'https://via.placeholder.com/300x300?text=No+Image';
+}
+
+// Auto-hide alerts after delay
+$(document).on('click', '.alert .btn-close', function() {
+    $(this).closest('.alert').fadeOut(300, function() {
+        $(this).remove();
+    });
+});
+
+// Prevent double form submission
+$('form').on('submit', function() {
+    const submitBtn = $(this).find('button[type="submit"]');
+    submitBtn.prop('disabled', true);
+    
+    setTimeout(() => {
+        submitBtn.prop('disabled', false);
+    }, 3000);
+});
+
+// Console log for debugging (remove in production)
+console.log('Main.js loaded successfully!');
+console.log('Cart functions initialized.');
+
+// Export functions to window for global access
+window.addToCart = addToCart;
+window.showMessage = showMessage;
+window.formatCurrency = formatCurrency;
+window.formatDate = formatDate;
+window.formatDateTime = formatDateTime;
+window.escapeHtml = escapeHtml;
+window.showLoading = showLoading;
+window.hideLoading = hideLoading;
+window.confirmDialog = confirmDialog;
+window.copyToClipboard = copyToClipboard;

@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Đơn hàng của tôi</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container">
+            <h2 class="fw-bold mb-4">
+                <i class="bi bi-bag-check"></i> Đơn hàng của tôi
+            </h2>
+            
+            <!-- Filter Tabs -->
+            <ul class="nav nav-tabs mb-4" id="orderTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="all-tab" data-status="ALL" 
+                            onclick="filterOrders('ALL')">
+                        <i class="bi bi-list-ul"></i> Tất cả
+                        <span class="badge bg-secondary ms-1" id="countAll">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="pending-tab" data-status="PENDING"
+                            onclick="filterOrders('PENDING')">
+                        <i class="bi bi-clock"></i> Chờ xác nhận
+                        <span class="badge bg-warning ms-1" id="countPending">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="confirmed-tab" data-status="CONFIRMED"
+                            onclick="filterOrders('CONFIRMED')">
+                        <i class="bi bi-check-circle"></i> Đã xác nhận
+                        <span class="badge bg-info ms-1" id="countConfirmed">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="shipping-tab" data-status="SHIPPING"
+                            onclick="filterOrders('SHIPPING')">
+                        <i class="bi bi-truck"></i> Đang giao
+                        <span class="badge bg-primary ms-1" id="countShipping">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="delivered-tab" data-status="DELIVERED"
+                            onclick="filterOrders('DELIVERED')">
+                        <i class="bi bi-box-seam"></i> Đã giao
+                        <span class="badge bg-success ms-1" id="countDelivered">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="cancelled-tab" data-status="CANCELLED"
+                            onclick="filterOrders('CANCELLED')">
+                        <i class="bi bi-x-circle"></i> Đã hủy
+                        <span class="badge bg-danger ms-1" id="countCancelled">0</span>
+                    </button>
+                </li>
+            </ul>
+            
+            <!-- Orders List -->
+            <div id="ordersContainer">
+                <!-- Loading -->
+                <div class="text-center py-5" id="loading">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="text-muted mt-2">Đang tải đơn hàng...</p>
+                </div>
+                
+                <!-- Orders List -->
+                <div id="ordersList"></div>
+                
+                <!-- Empty State -->
+                <div id="emptyState" class="d-none">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body text-center py-5">
+                            <i class="bi bi-inbox fs-1 text-muted"></i>
+                            <h5 class="mt-3 text-muted">Chưa có đơn hàng nào</h5>
+                            <p class="text-muted mb-4">Hãy đặt hàng ngay để trải nghiệm dịch vụ của chúng tôi!</p>
+                            <a th:href="@{/products}" class="btn btn-primary">
+                                <i class="bi bi-shop"></i> Mua sắm ngay
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pagination -->
+            <nav id="pagination" class="mt-4 d-none">
+                <ul class="pagination justify-content-center" id="paginationList"></ul>
+            </nav>
+        </div>
+    </div>
+    
+    <th:block layout:fragment="scripts">
+        <script>
+        let currentPage = 0;
+        let currentStatus = 'ALL';
+        let totalPages = 0;
+        
+        $(document).ready(function() {
+            loadOrders();
+            loadOrderCounts();
+        });
+        
+        function filterOrders(status) {
+            currentStatus = status;
+            currentPage = 0;
+            
+            // Update active tab
+            $('.nav-link').removeClass('active');
+            $(`#${status.toLowerCase()}-tab`).addClass('active');
+            
+            loadOrders();
+        }
+        
+        function loadOrders() {
+            $('#loading').removeClass('d-none');
+            $('#ordersList').empty();
+            $('#emptyState').addClass('d-none');
+            $('#pagination').addClass('d-none');
+            
+            $.ajax({
+                url: '/api/orders',
+                method: 'GET',
+                data: {
+                    page: currentPage,
+                    size: 10
+                },
+                success: function(response) {
+                    $('#loading').addClass('d-none');
+                    
+                    if (response.data && response.data.content) {
+                        let orders = response.data.content;
+                        
+                        // Filter by status if not ALL
+                        if (currentStatus !== 'ALL') {
+                            orders = orders.filter(o => o.status === currentStatus);
+                        }
+                        
+                        if (orders.length === 0) {
+                            $('#emptyState').removeClass('d-none');
+                        } else {
+                            renderOrders(orders);
+                            
+                            // Update pagination
+                            totalPages = response.data.totalPages;
+                            if (totalPages > 1) {
+                                renderPagination();
+                            }
+                        }
+                    } else {
+                        $('#emptyState').removeClass('d-none');
+                    }
+                },
+                error: function(xhr) {
+                    $('#loading').addClass('d-none');
+                    
+                    if (xhr.status === 401 || xhr.status === 403) {
+                        showMessage('Vui lòng đăng nhập!', 'warning');
+                        setTimeout(() => window.location.href = '/login', 1500);
+                    } else {
+                        showMessage('Không thể tải đơn hàng', 'danger');
+                        $('#emptyState').removeClass('d-none');
+                    }
+                }
+            });
+        }
+        
+        function loadOrderCounts() {
+            // This would ideally be a dedicated API endpoint
+            // For now, we'll update counts when loading orders
+            $.ajax({
+                url: '/api/orders',
+                method: 'GET',
+                data: { page: 0, size: 100 },
+                success: function(response) {
+                    if (response.data && response.data.content) {
+                        const orders = response.data.content;
+                        
+                        $('#countAll').text(orders.length);
+                        $('#countPending').text(orders.filter(o => o.status === 'PENDING').length);
+                        $('#countConfirmed').text(orders.filter(o => o.status === 'CONFIRMED').length);
+                        $('#countShipping').text(orders.filter(o => o.status === 'SHIPPING').length);
+                        $('#countDelivered').text(orders.filter(o => o.status === 'DELIVERED').length);
+                        $('#countCancelled').text(orders.filter(o => o.status === 'CANCELLED').length);
+                    }
+                }
+            });
+        }
+        
+        function renderOrders(orders) {
+            let html = '';
+            
+            orders.forEach(function(order) {
+                const statusInfo = getStatusInfo(order.status);
+                const canCancel = order.status === 'PENDING' || order.status === 'CONFIRMED';
+                
+                html += `
+                    <div class="card border-0 shadow-sm mb-3">
+                        <div class="card-header bg-light">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <h6 class="mb-1">
+                                        <i class="bi bi-receipt"></i>
+                                        Đơn hàng #${order.id}
+                                    </h6>
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar"></i>
+                                        ${formatDateTime(order.createdAt)}
+                                    </small>
+                                </div>
+                                <div class="col-md-6 text-md-end mt-2 mt-md-0">
+                                    <span class="badge ${statusInfo.class} fs-6">
+                                        ${statusInfo.text}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="mb-2">
+                                        <strong>Sản phẩm:</strong>
+                                        <span class="text-muted">${order.items.length} sản phẩm</span>
+                                    </div>
+                                    ${renderOrderItems(order.items)}
+                                    <div class="mt-2">
+                                        <i class="bi bi-geo-alt text-muted"></i>
+                                        <small class="text-muted">${escapeHtml(order.shippingAddress)}</small>
+                                    </div>
+                                    <div class="mt-1">
+                                        <i class="bi bi-telephone text-muted"></i>
+                                        <small class="text-muted">${escapeHtml(order.phone)}</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-md-end">
+                                    <div class="mb-2">
+                                        <small class="text-muted d-block">Tổng tiền:</small>
+                                        <h4 class="product-price mb-0">
+                                            ${formatCurrency(order.totalAmount)}
+                                        </h4>
+                                    </div>
+                                    <div class="d-grid gap-2">
+                                        <a href="/orders/${order.id}" 
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="bi bi-eye"></i> Xem chi tiết
+                                        </a>
+                                        ${canCancel ? `
+                                            <button class="btn btn-outline-danger btn-sm" 
+                                                    onclick="cancelOrder(${order.id})">
+                                                <i class="bi bi-x-circle"></i> Hủy đơn
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            $('#ordersList').html(html);
+        }
+        
+        function renderOrderItems(items) {
+            let html = '<div class="order-items-preview mt-2">';
+            
+            items.slice(0, 3).forEach(function(item) {
+                html += `
+                    <div class="d-flex align-items-center mb-2">
+                        <img src="${item.productImage || 'https://via.placeholder.com/40'}" 
+                             alt="${escapeHtml(item.productName)}"
+                             style="width: 40px; height: 40px; object-fit: cover;"
+                             class="rounded me-2"
+                             onerror="this.src='https://via.placeholder.com/40'">
+                        <div class="flex-grow-1">
+                            <small class="d-block">${escapeHtml(item.productName)}</small>
+                            <small class="text-muted">x${item.quantity}</small>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            if (items.length > 3) {
+                html += `<small class="text-muted">... và ${items.length - 3} sản phẩm khác</small>`;
+            }
+            
+            html += '</div>';
+            return html;
+        }
+        
+        function renderPagination() {
+            let html = '';
+            
+            // Previous button
+            html += `
+                <li class="page-item ${currentPage === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">
+                        Trước
+                    </a>
+                </li>
+            `;
+            
+            // Page numbers
+            for (let i = 0; i < totalPages; i++) {
+                html += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="changePage(${i}); return false;">
+                            ${i + 1}
+                        </a>
+                    </li>
+                `;
+            }
+            
+            // Next button
+            html += `
+                <li class="page-item ${currentPage === totalPages - 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">
+                        Sau
+                    </a>
+                </li>
+            `;
+            
+            $('#paginationList').html(html);
+            $('#pagination').removeClass('d-none');
+        }
+        
+        function changePage(page) {
+            if (page >= 0 && page < totalPages) {
+                currentPage = page;
+                loadOrders();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+        
+        function cancelOrder(orderId) {
+            if (!confirm('Bạn có chắc muốn hủy đơn hàng này?')) {
+                return;
+            }
+            
+            $.ajax({
+                url: `/api/orders/${orderId}/cancel?confirm=true`,
+                method: 'PUT',
+                success: function() {
+                    showMessage('Hủy đơn hàng thành công!', 'success');
+                    loadOrders();
+                    loadOrderCounts();
+                },
+                error: function(xhr) {
+                    const msg = xhr.responseJSON?.message || 'Không thể hủy đơn hàng';
+                    showMessage(msg, 'danger');
+                }
+            });
+        }
+        
+        function getStatusInfo(status) {
+            const statusMap = {
+                'PENDING': { text: 'Chờ xác nhận', class: 'bg-warning' },
+                'CONFIRMED': { text: 'Đã xác nhận', class: 'bg-info' },
+                'SHIPPING': { text: 'Đang giao', class: 'bg-primary' },
+                'DELIVERED': { text: 'Đã giao', class: 'bg-success' },
+                'CANCELLED': { text: 'Đã hủy', class: 'bg-danger' }
+            };
+            return statusMap[status] || { text: status, class: 'bg-secondary' };
+        }
+        
+        function formatCurrency(amount) {
+            if (!amount && amount !== 0) return '0 ₫';
+            return new Intl.NumberFormat('vi-VN').format(amount) + ' ₫';
+        }
+        
+        function formatDateTime(dateStr) {
+            if (!dateStr) return '';
+            return new Date(dateStr).toLocaleString('vi-VN');
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return String(text).replace(/[&<>"']/g, m => map[m]);
+        }
+        
+        function showMessage(message, type) {
+            $('.alert-notification').remove();
+            
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3 alert-notification" 
+                     role="alert" style="z-index: 9999; min-width: 300px;">
+                    <strong>
+                        ${type === 'success' ? '<i class="bi bi-check-circle"></i>' : 
+                          type === 'danger' ? '<i class="bi bi-x-circle"></i>' : 
+                          type === 'warning' ? '<i class="bi bi-exclamation-triangle"></i>' : 
+                          '<i class="bi bi-info-circle"></i>'}
+                    </strong>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            $('body').append(alertHtml);
+            setTimeout(() => $('.alert-notification').fadeOut(), 5000);
+        }
+        </script>
+        
+        <style>
+        .nav-tabs .nav-link {
+            color: #6c757d;
+        }
+        
+        .nav-tabs .nav-link.active {
+            font-weight: 600;
+        }
+        
+        .order-items-preview {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        @media (max-width: 768px) {
+            .nav-tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+            }
+            
+            .nav-tabs .nav-link {
+                white-space: nowrap;
+            }
+        }
+        </style>
+    </th:block>
+</body>
+</html>

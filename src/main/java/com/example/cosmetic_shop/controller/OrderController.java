@@ -5,6 +5,7 @@ import com.example.cosmetic_shop.dto.OrderRequest;
 import com.example.cosmetic_shop.dto.OrderResponse;
 import com.example.cosmetic_shop.entity.Order;
 import com.example.cosmetic_shop.service.OrderService;
+import com.example.cosmetic_shop.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 public class OrderController {
     
     private final OrderService orderService;
+    private final UserService userService;
     
     // Lấy userId từ Authentication
     private Long getCurrentUserId() {
@@ -32,8 +34,7 @@ public class OrderController {
         }
         
         String username = authentication.getName();
-        // TODO: Implement proper user ID retrieval from UserService
-        throw new RuntimeException("Cần implement getCurrentUserId() - lấy userId từ username: " + username);
+        return userService.getUserIdByUsername(username);
     }
     
     // POST /api/orders - Đặt hàng
