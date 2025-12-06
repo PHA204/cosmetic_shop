@@ -63,9 +63,11 @@ public class SecurityConfig {
                         
                         // Static resources
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
+                        .requestMatchers("/favicon.ico").permitAll()
                         
                         // User pages (authenticated)
                         .requestMatchers("/cart", "/cart/**").authenticated()
+                        .requestMatchers("/checkout").authenticated()
                         .requestMatchers("/orders", "/orders/**").authenticated()
                         .requestMatchers("/profile", "/profile/**").authenticated()
                         
@@ -85,6 +87,8 @@ public class SecurityConfig {
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/")
+                        .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID")
                         .permitAll()
                 );
         

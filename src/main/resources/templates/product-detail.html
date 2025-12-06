@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout}">
+<head>
+    <title th:text="${product.name}">Chi tiết sản phẩm</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container">
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a th:href="@{/}">Trang chủ</a></li>
+                    <li class="breadcrumb-item"><a th:href="@{/products}">Sản phẩm</a></li>
+                    <li class="breadcrumb-item active" th:text="${product.name}">Product</li>
+                </ol>
+            </nav>
+            
+            <div class="row">
+                <!-- Product Image -->
+                <div class="col-md-5 mb-4">
+                    <div class="card border-0 shadow-sm">
+                        <img th:src="${product.image}" 
+                             th:alt="${product.name}"
+                             class="card-img-top"
+                             style="height: 500px; object-fit: cover;"
+                             onerror="this.src='https://via.placeholder.com/500x500?text=No+Image'">
+                    </div>
+                </div>
+                
+                <!-- Product Info -->
+                <div class="col-md-7">
+                    <div class="mb-3">
+                        <h2 class="fw-bold mb-3" th:text="${product.name}">Product Name</h2>
+                        
+                        <!-- Status Badge -->
+                        <span class="badge bg-success me-2" th:if="${product.stock > 0}">
+                            <i class="bi bi-check-circle"></i> Còn hàng
+                        </span>
+                        <span class="badge bg-danger me-2" th:if="${product.stock == 0}">
+                            <i class="bi bi-x-circle"></i> Hết hàng
+                        </span>
+                        
+                        <!-- Category -->
+                        <span class="badge bg-info">
+                            <i class="bi bi-tag"></i>
+                            <span th:text="${product.categoryName}">Category</span>
+                        </span>
+                    </div>
+                    
+                    <!-- Price -->
+                    <div class="mb-4">
+                        <h3 class="product-price mb-0" 
+                            th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">
+                            Price
+                        </h3>
+                    </div>
+                    
+                    <!-- Stock Info -->
+                    <div class="alert alert-info" th:if="${product.stock > 0}">
+                        <i class="bi bi-box-seam"></i>
+                        Còn <strong th:text="${product.stock}">0</strong> sản phẩm trong kho
+                    </div>
+                    
+                    <!-- Description -->
+                    <div class="mb-4">
+                        <h5 class="fw-bold mb-3">
+                            <i class="bi bi-info-circle"></i> Mô tả sản phẩm
+                        </h5>
+                        <p class="text-muted" th:text="${product.description}">Description</p>
+                    </div>
+                    
+                    <!-- Quantity and Add to Cart -->
+                    <div class="card border-primary mb-4" sec:authorize="isAuthenticated()">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-4 mb-3 mb-md-0">
+                                    <label class="form-label fw-bold">Số lượng:</label>
+                                    <div class="input-group">
+                                        <button class="btn btn-outline-secondary" type="button" 
+                                                onclick="decreaseQuantity()">
+                                            <i class="bi bi-dash"></i>
+                                        </button>
+                                        <input type="number" class="form-control text-center" 
+                                               id="quantity" value="1" min="1" 
+                                               th:max="${product.stock}">
+                                        <button class="btn btn-outline-secondary" type="button" 
+                                                onclick="increaseQuantity()">
+                                            <i class="bi bi-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-8">
+                                    <button class="btn btn-add-cart btn-lg w-100" 
+                                            th:onclick="|addToCartDetail(${product.id})|"
+                                            th:disabled="${product.stock == 0}">
+                                        <i class="bi bi-cart-plus"></i> Thêm vào giỏ hàng
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Login Required -->
+                    <div class="alert alert-warning" sec:authorize="!isAuthenticated()">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Vui lòng <a th:href="@{/login}" class="alert-link">đăng nhập</a> 
+                        để thêm sản phẩm vào giỏ hàng
+                    </div>
+                    
+                    <!-- Product Details -->
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-3">Thông tin chi tiết:</h6>
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-2">
+                                    <i class="bi bi-tag-fill text-primary"></i>
+                                    Danh mục: <strong th:text="${product.categoryName}">Category</strong>
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-box-seam text-primary"></i>
+                                    Tồn kho: <strong th:text="${product.stock}">0</strong>
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-calendar text-primary"></i>
+                                    Ngày thêm: 
+                                    <strong th:text="${#temporals.format(product.createdAt, 'dd/MM/yyyy')}">
+                                        Date
+                                    </strong>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Related Products -->
+            <div class="mt-5" th:if="${relatedProducts != null && !relatedProducts.isEmpty()}">
+                <h4 class="fw-bold mb-4">
+                    <i class="bi bi-grid-3x3"></i> Sản phẩm liên quan
+                </h4>
+                <div class="row g-4">
+                    <div class="col-lg-3 col-md-4 col-sm-6" 
+                         th:each="related : ${relatedProducts}">
+                        <div class="card product-card border-0 shadow-sm h-100">
+                            <img th:src="${related.image}" 
+                                 th:alt="${related.name}"
+                                 class="card-img-top"
+                                 onerror="this.src='https://via.placeholder.com/300x300?text=No+Image'">
+                            
+                            <div class="card-body">
+                                <h6 class="card-title" th:text="${related.name}">Product</h6>
+                                <p class="product-price mb-3" 
+                                   th:text="${#numbers.formatDecimal(related.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">
+                                    Price
+                                </p>
+                                <a th:href="@{/products/{id}(id=${related.id})}" 
+                                   class="btn btn-outline-primary btn-sm w-100">
+                                    <i class="bi bi-eye"></i> Xem chi tiết
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <th:block layout:fragment="scripts">
+        <script>
+        function addToCartDetail(productId) {
+            const quantity = parseInt(document.getElementById('quantity').value);
+            addToCart(productId, quantity);
+        }
+        
+        function increaseQuantity() {
+            const input = document.getElementById('quantity');
+            const max = parseInt(input.max);
+            const current = parseInt(input.value);
+            if (current < max) {
+                input.value = current + 1;
+            }
+        }
+        
+        function decreaseQuantity() {
+            const input = document.getElementById('quantity');
+            const current = parseInt(input.value);
+            if (current > 1) {
+                input.value = current - 1;
+            }
+        }
+        </script>
+    </th:block>
+</body>
+</html>

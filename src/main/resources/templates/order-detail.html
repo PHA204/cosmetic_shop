@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Chi tiết đơn hàng</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container">
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a th:href="@{/}">Trang chủ</a></li>
+                    <li class="breadcrumb-item"><a th:href="@{/orders}">Đơn hàng</a></li>
+                    <li class="breadcrumb-item active">Chi tiết</li>
+                </ol>
+            </nav>
+            
+            <!-- Loading -->
+            <div class="text-center py-5" id="loading">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+            
+            <!-- Order Detail -->
+            <div id="orderDetail" class="d-none">
+                <!-- Order Header -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h3 class="mb-2">
+                                    <i class="bi bi-bag-check"></i> 
+                                    Đơn hàng <span id="orderId"></span>
+                                </h3>
+                                <p class="text-muted mb-0">
+                                    <i class="bi bi-calendar"></i>
+                                    Đặt ngày: <span id="orderDate"></span>
+                                </p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <span id="orderStatus" class="badge fs-6"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <!-- Order Items -->
+                    <div class="col-lg-8 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-box-seam"></i> Sản phẩm đã đặt
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="orderItems"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Order Info -->
+                    <div class="col-lg-4">
+                        <!-- Shipping Info -->
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-truck"></i> Thông tin giao hàng
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <small class="text-muted d-block">Người nhận:</small>
+                                    <strong id="receiverName"></strong>
+                                </div>
+                                <div class="mb-3">
+                                    <small class="text-muted d-block">Số điện thoại:</small>
+                                    <strong id="receiverPhone"></strong>
+                                </div>
+                                <div class="mb-3">
+                                    <small class="text-muted d-block">Địa chỉ:</small>
+                                    <p id="shippingAddress" class="mb-0"></p>
+                                </div>
+                                <div id="noteSection" class="d-none">
+                                    <small class="text-muted d-block">Ghi chú:</small>
+                                    <p id="orderNote" class="mb-0 fst-italic"></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Payment Info -->
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-cash-coin"></i> Thanh toán
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Tạm tính:</span>
+                                    <strong id="subtotal"></strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Phí vận chuyển:</span>
+                                    <strong class="text-success">Miễn phí</strong>
+                                </div>
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <strong>Tổng cộng:</strong>
+                                    <h4 class="product-price mb-0" id="totalAmount"></h4>
+                                </div>
+                                <div class="mt-3 p-2 bg-light rounded">
+                                    <small class="text-muted">
+                                        <i class="bi bi-credit-card"></i>
+                                        Thanh toán khi nhận hàng (COD)
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Actions -->
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <button id="cancelBtn" class="btn btn-danger d-none" 
+                                            onclick="cancelOrder()">
+                                        <i class="bi bi-x-circle"></i> Hủy đơn hàng
+                                    </button>
+                                    <a th:href="@{/orders}" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-left"></i> Quay lại
+                                    </a>
+                                    <button class="btn btn-outline-primary" onclick="window.print()">
+                                        <i class="bi bi-printer"></i> In đơn hàng
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Order Timeline -->
+                <div class="card border-0 shadow-sm mt-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-clock-history"></i> Lịch sử đơn hàng
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="timeline">
+                            <div class="timeline-item">
+                                <i class="bi bi-check-circle text-success"></i>
+                                <div>
+                                    <strong>Đơn hàng đã đặt</strong>
+                                    <p class="text-muted small mb-0" id="createdTime"></p>
+                                </div>
+                            </div>
+                            <div id="timelineItems"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <th:block layout:fragment="scripts">
+        <script>
+        const orderId = window.location.pathname.split('/').pop();
+        
+        $(document).ready(function() {
+            loadOrderDetail();
+        });
+        
+        function loadOrderDetail() {
+            $.ajax({
+                url: `/api/orders/${orderId}`,
+                method: 'GET',
+                success: function(response) {
+                    $('#loading').addClass('d-none');
+                    renderOrderDetail(response.data);
+                },
+                error: function(xhr) {
+                    $('#loading').addClass('d-none');
+                    const msg = xhr.responseJSON?.message || 'Không thể tải thông tin đơn hàng';
+                    showMessage(msg, 'danger');
+                    setTimeout(() => window.location.href = '/orders', 2000);
+                }
+            });
+        }
+        
+        function renderOrderDetail(order) {
+            // Header
+            $('#orderId').text('#' + order.id);
+            $('#orderDate').text(formatDate(order.createdAt));
+            $('#orderStatus').addClass(getStatusClass(order.status))
+                            .text(getStatusText(order.status));
+            
+            // Items
+            let itemsHtml = '';
+            order.items.forEach(function(item) {
+                itemsHtml += `
+                    <div class="d-flex mb-3 pb-3 border-bottom">
+                        <img src="${item.productImage}" 
+                             alt="${item.productName}"
+                             class="rounded me-3"
+                             style="width: 80px; height: 80px; object-fit: cover;"
+                             onerror="this.src='https://via.placeholder.com/80'">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">${item.productName}</h6>
+                            <p class="text-muted small mb-1">
+                                ${formatCurrency(item.price)} x ${item.quantity}
+                            </p>
+                            <strong class="product-price">
+                                ${formatCurrency(item.subTotal)}
+                            </strong>
+                        </div>
+                    </div>
+                `;
+            });
+            $('#orderItems').html(itemsHtml);
+            
+            // Shipping Info
+            $('#receiverName').text(order.username);
+            $('#receiverPhone').text(order.phone);
+            $('#shippingAddress').text(order.shippingAddress);
+            
+            if (order.note) {
+                $('#orderNote').text(order.note);
+                $('#noteSection').removeClass('d-none');
+            }
+            
+            // Payment
+            $('#subtotal').text(formatCurrency(order.totalAmount));
+            $('#totalAmount').text(formatCurrency(order.totalAmount));
+            
+            // Cancel button
+            if (order.status === 'PENDING' || order.status === 'CONFIRMED') {
+                $('#cancelBtn').removeClass('d-none');
+            }
+            
+            // Timeline
+            $('#createdTime').text(formatDateTime(order.createdAt));
+            if (order.updatedAt !== order.createdAt) {
+                $('#timelineItems').html(`
+                    <div class="timeline-item">
+                        <i class="bi bi-arrow-repeat text-info"></i>
+                        <div>
+                            <strong>Cập nhật trạng thái</strong>
+                            <p class="text-muted small mb-0">${formatDateTime(order.updatedAt)}</p>
+                        </div>
+                    </div>
+                `);
+            }
+            
+            $('#orderDetail').removeClass('d-none');
+        }
+        
+        function cancelOrder() {
+            if (!confirm('Bạn có chắc muốn hủy đơn hàng này?')) return;
+            
+            $.ajax({
+                url: `/api/orders/${orderId}/cancel?confirm=true`,
+                method: 'PUT',
+                success: function() {
+                    showMessage('Hủy đơn hàng thành công!', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                },
+                error: function(xhr) {
+                    const msg = xhr.responseJSON?.message || 'Không thể hủy đơn hàng';
+                    showMessage(msg, 'danger');
+                }
+            });
+        }
+        
+        function getStatusClass(status) {
+            const classes = {
+                'PENDING': 'bg-warning',
+                'CONFIRMED': 'bg-info',
+                'SHIPPING': 'bg-primary',
+                'DELIVERED': 'bg-success',
+                'CANCELLED': 'bg-danger'
+            };
+            return classes[status] || 'bg-secondary';
+        }
+        
+        function getStatusText(status) {
+            const texts = {
+                'PENDING': 'Chờ xác nhận',
+                'CONFIRMED': 'Đã xác nhận',
+                'SHIPPING': 'Đang giao',
+                'DELIVERED': 'Đã giao',
+                'CANCELLED': 'Đã hủy'
+            };
+            return texts[status] || status;
+        }
+        
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN').format(amount) + ' ₫';
+        }
+        
+        function formatDate(dateStr) {
+            return new Date(dateStr).toLocaleDateString('vi-VN');
+        }
+        
+        function formatDateTime(dateStr) {
+            return new Date(dateStr).toLocaleString('vi-VN');
+        }
+        
+        function showMessage(message, type) {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3" 
+                     role="alert" style="z-index: 9999;">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            $('body').append(alertHtml);
+            setTimeout(() => $('.alert').fadeOut(), 3000);
+        }
+        </script>
+        
+        <style>
+        .timeline {
+            position: relative;
+            padding-left: 40px;
+        }
+        .timeline-item {
+            position: relative;
+            padding-bottom: 20px;
+            display: flex;
+            align-items-start;
+        }
+        .timeline-item i {
+            position: absolute;
+            left: -40px;
+            font-size: 24px;
+            background: white;
+        }
+        .timeline-item:not(:last-child):before {
+            content: '';
+            position: absolute;
+            left: -28px;
+            top: 30px;
+            height: 100%;
+            width: 2px;
+            background: #ddd;
+        }
+        
+        @media print {
+            .btn, nav, .card-header { display: none !important; }
+        }
+        </style>
+    </th:block>
+</body>
+</html>

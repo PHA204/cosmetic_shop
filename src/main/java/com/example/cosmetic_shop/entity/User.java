@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 
 @Entity
@@ -26,13 +28,15 @@ public class User {
     @Column(nullable = false)
     private String password;
     
-    @Column(name = "full_name", nullable = false, length = 100)
+    @Column(name = "full_name", nullable = false, length = 100, columnDefinition = "NVARCHAR(100)")
+    @JdbcTypeCode(SqlTypes.NVARCHAR)
     private String fullName;
     
     @Column(length = 15)
     private String phone;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "NVARCHAR(MAX)")
+    @JdbcTypeCode(SqlTypes.NVARCHAR)
     private String address;
     
     @Column(nullable = false, length = 20)

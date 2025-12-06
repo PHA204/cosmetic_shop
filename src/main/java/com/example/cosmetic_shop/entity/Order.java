@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,13 +35,15 @@ public class Order {
     @Enumerated(EnumType.STRING)
     private OrderStatus status = OrderStatus.PENDING;
     
-    @Column(name = "shipping_address", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "shipping_address", nullable = false, columnDefinition = "NVARCHAR(MAX)")
+    @JdbcTypeCode(SqlTypes.NVARCHAR)
     private String shippingAddress;
     
     @Column(nullable = false, length = 15)
     private String phone;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "NVARCHAR(MAX)")
+    @JdbcTypeCode(SqlTypes.NVARCHAR)
     private String note;
     
     @Column(name = "created_at", nullable = false, updatable = false)

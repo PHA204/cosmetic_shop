@@ -37,6 +37,7 @@
         <dependency>
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
+            <version>12.4.0.jre11</version>
             <scope>runtime</scope>
         </dependency>
         
@@ -78,7 +79,11 @@
             <scope>runtime</scope>
         </dependency>
         <!-- THÊM VÀO pom.xml của bạn -->
-
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-core</artifactId>
+            <version>6.3.1.Final</version>
+        </dependency>
         <!-- Thymeleaf -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Thanh toán</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container">
+            <h2 class="fw-bold mb-4">
+                <i class="bi bi-credit-card"></i> Thanh toán đơn hàng
+            </h2>
+            
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a th:href="@{/}">Trang chủ</a></li>
+                    <li class="breadcrumb-item"><a th:href="@{/cart}">Giỏ hàng</a></li>
+                    <li class="breadcrumb-item active">Thanh toán</li>
+                </ol>
+            </nav>
+            
+            <div class="row">
+                <!-- Checkout Form -->
+                <div class="col-lg-7 mb-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-person-circle"></i> Thông tin giao hàng
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="checkoutForm">
+                                <div class="mb-3">
+                                    <label for="fullName" class="form-label">
+                                        <i class="bi bi-person"></i> Họ và tên *
+                                    </label>
+                                    <input type="text" class="form-control" id="fullName" 
+                                           name="fullName" required 
+                                           placeholder="Nguyễn Văn A">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="phone" class="form-label">
+                                        <i class="bi bi-telephone"></i> Số điện thoại *
+                                    </label>
+                                    <input type="tel" class="form-control" id="phone" 
+                                           name="phone" required 
+                                           placeholder="0123456789"
+                                           pattern="[0-9]{10,11}">
+                                    <div class="form-text">Nhập 10-11 chữ số</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">
+                                        <i class="bi bi-envelope"></i> Email
+                                    </label>
+                                    <input type="email" class="form-control" id="email" 
+                                           name="email" placeholder="email@example.com">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="shippingAddress" class="form-label">
+                                        <i class="bi bi-geo-alt"></i> Địa chỉ giao hàng *
+                                    </label>
+                                    <textarea class="form-control" id="shippingAddress" 
+                                              name="shippingAddress" rows="3" required
+                                              placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố"></textarea>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="note" class="form-label">
+                                        <i class="bi bi-chat-left-text"></i> Ghi chú đơn hàng
+                                    </label>
+                                    <textarea class="form-control" id="note" 
+                                              name="note" rows="2"
+                                              placeholder="Ghi chú về đơn hàng (tùy chọn)"></textarea>
+                                </div>
+                                
+                                <hr>
+                                
+                                <h6 class="fw-bold mb-3">
+                                    <i class="bi bi-cash-coin"></i> Phương thức thanh toán
+                                </h6>
+                                
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" 
+                                           name="paymentMethod" id="cod" value="COD" checked>
+                                    <label class="form-check-label" for="cod">
+                                        <i class="bi bi-cash"></i> Thanh toán khi nhận hàng (COD)
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" 
+                                           name="paymentMethod" id="banking" value="BANKING" disabled>
+                                    <label class="form-check-label text-muted" for="banking">
+                                        <i class="bi bi-bank"></i> Chuyển khoản ngân hàng (Sắp có)
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="radio" 
+                                           name="paymentMethod" id="momo" value="MOMO" disabled>
+                                    <label class="form-check-label text-muted" for="momo">
+                                        <i class="bi bi-wallet2"></i> Ví MoMo (Sắp có)
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-3">
+                                    <input type="checkbox" class="form-check-input" 
+                                           id="agreeTerms" required>
+                                    <label class="form-check-label" for="agreeTerms">
+                                        Tôi đã đọc và đồng ý với 
+                                        <a href="#" class="text-decoration-none">
+                                            Điều khoản và Điều kiện
+                                        </a>
+                                    </label>
+                                </div>
+                                
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary btn-lg" id="placeOrderBtn">
+                                        <i class="bi bi-check-circle"></i> Đặt hàng
+                                    </button>
+                                    <a th:href="@{/cart}" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-left"></i> Quay lại giỏ hàng
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Order Summary -->
+                <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm sticky-top" style="top: 80px;">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-receipt"></i> Thông tin đơn hàng
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Loading -->
+                            <div class="text-center py-3" id="summaryLoading">
+                                <div class="spinner-border spinner-border-sm" role="status"></div>
+                                <p class="small text-muted mt-2">Đang tải...</p>
+                            </div>
+                            
+                            <!-- Order Items -->
+                            <div id="orderSummary" class="d-none">
+                                <div id="summaryItems" class="mb-3"></div>
+                                
+                                <hr>
+                                
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Tạm tính:</span>
+                                    <strong id="summarySubtotal">0 ₫</strong>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Phí vận chuyển:</span>
+                                    <strong class="text-success">Miễn phí</strong>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted small">Giảm giá:</span>
+                                    <span class="text-muted small">0 ₫</span>
+                                </div>
+                                
+                                <hr>
+                                
+                                <div class="d-flex justify-content-between mb-3">
+                                    <strong>Tổng cộng:</strong>
+                                    <h4 class="product-price mb-0" id="summaryTotal">0 ₫</h4>
+                                </div>
+                                
+                                <div class="alert alert-info small mb-0">
+                                    <i class="bi bi-info-circle"></i>
+                                    Miễn phí vận chuyển cho đơn hàng từ 500.000đ
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <th:block layout:fragment="scripts">
+        <script>
+        $(document).ready(function() {
+            loadOrderSummary();
+            
+            // Handle form submit
+            $('#checkoutForm').on('submit', function(e) {
+                e.preventDefault();
+                placeOrder();
+            });
+        });
+        
+        function loadOrderSummary() {
+            $.ajax({
+                url: '/api/cart',
+                method: 'GET',
+                success: function(response) {
+                    $('#summaryLoading').addClass('d-none');
+                    
+                    if (response.data.items.length === 0) {
+                        showMessage('Giỏ hàng trống! Vui lòng thêm sản phẩm.', 'warning');
+                        setTimeout(() => window.location.href = '/products', 2000);
+                        return;
+                    }
+                    
+                    renderOrderSummary(response.data);
+                },
+                error: function() {
+                    showMessage('Không thể tải thông tin đơn hàng', 'danger');
+                }
+            });
+        }
+        
+        function renderOrderSummary(cart) {
+            let html = '';
+            
+            cart.items.forEach(function(item) {
+                html += `
+                    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                        <div class="d-flex align-items-center">
+                            <img src="${item.productImage}" 
+                                 alt="${item.productName}"
+                                 style="width: 50px; height: 50px; object-fit: cover;"
+                                 class="rounded me-2"
+                                 onerror="this.src='https://via.placeholder.com/50'">
+                            <div>
+                                <small class="d-block">${item.productName}</small>
+                                <small class="text-muted">x${item.quantity}</small>
+                            </div>
+                        </div>
+                        <strong class="small">${formatCurrency(item.subTotal)}</strong>
+                    </div>
+                `;
+            });
+            
+            $('#summaryItems').html(html);
+            $('#summarySubtotal').text(formatCurrency(cart.totalAmount));
+            $('#summaryTotal').text(formatCurrency(cart.totalAmount));
+            $('#orderSummary').removeClass('d-none');
+        }
+        
+        function placeOrder() {
+            const orderData = {
+                shippingAddress: $('#shippingAddress').val(),
+                phone: $('#phone').val(),
+                note: $('#note').val()
+            };
+            
+            const btn = $('#placeOrderBtn');
+            const originalText = btn.html();
+            btn.prop('disabled', true)
+               .html('<span class="spinner-border spinner-border-sm"></span> Đang xử lý...');
+            
+            $.ajax({
+                url: '/api/orders',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(orderData),
+                success: function(response) {
+                    showMessage('Đặt hàng thành công!', 'success');
+                    
+                    setTimeout(() => {
+                        window.location.href = '/orders/' + response.data.orderId;
+                    }, 1500);
+                },
+                error: function(xhr) {
+                    const msg = xhr.responseJSON?.message || 'Có lỗi xảy ra!';
+                    showMessage(msg, 'danger');
+                    btn.prop('disabled', false).html(originalText);
+                }
+            });
+        }
+        
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN').format(amount) + ' ₫';
+        }
+        
+        function showMessage(message, type) {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3" 
+                     role="alert" style="z-index: 9999;">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            $('body').append(alertHtml);
+            setTimeout(() => $('.alert').fadeOut(), 3000);
+        }
+        </script>
+    </th:block>
+</body>
+</html>
