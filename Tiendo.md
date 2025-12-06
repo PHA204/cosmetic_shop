@@ -1,0 +1,414 @@
+# Tiến Độ Xây Dựng Website Bán Mỹ Phẩm
+
+## 📋 Tổng Quan Dự Án
+- **Công nghệ**: Java Spring Boot 3.4.12
+- **Database**: SQL Server (MSISQL-EXPRESS)
+- **Build Tool**: Maven
+- **Java Version**: 17
+- **Chức năng chính**: Quản lý sản phẩm, Đăng ký/Đăng nhập, Giỏ hàng, Đặt hàng
+
+---
+
+## ✅ ĐÃ HOÀN THÀNH
+
+### 1. Thiết Lập Project ✅ **[100%]**
+- [x] Tạo project Spring Boot từ Spring Initializr
+- [x] Cấu hình pom.xml với các dependencies
+- [x] Cấu hình kết nối SQL Server trong application.properties
+- [x] Thêm sqljdbc_auth.dll cho Windows Authentication
+- [x] Tạo database `CosmeticShopDB`
+- [x] Test kết nối thành công ✅
+
+### 2. Cấu Trúc Thư Mục ✅ **[100%]**
+```
+src/main/java/com/example/cosmeticshop/
+├── entity/          ✅ Hoàn thành
+├── repository/      ⏳ Đang chuẩn bị
+├── service/         ⏳ Đang chuẩn bị
+├── controller/      ⏳ Đang chuẩn bị
+├── dto/            ⏳ Đang chuẩn bị
+├── config/         ⏳ Đang chuẩn bị
+├── security/       ⏳ Đang chuẩn bị
+└── exception/      ⏳ Đang chuẩn bị
+```
+
+### 3. Entity & Model Layer ✅ **[100%]**
+Đã tạo thành công các Entity classes:
+- [x] **User** - Người dùng (id, username, email, password, fullName, phone, address, role, createdAt)
+- [x] **Product** - Sản phẩm mỹ phẩm (id, name, description, price, image, stock, category, isActive, createdAt)
+- [x] **Category** - Danh mục (id, name, description, createdAt)
+- [x] **Cart** - Giỏ hàng (id, user, createdAt, updatedAt)
+- [x] **CartItem** - Sản phẩm trong giỏ (id, cart, product, quantity)
+- [x] **Order** - Đơn hàng (id, user, totalAmount, status, shippingAddress, phone, note, createdAt)
+- [x] **OrderItem** - Chi tiết đơn hàng (id, order, product, quantity, price)
+
+**Relationships:**
+- User 1-1 Cart
+- User 1-N Order
+- Category 1-N Product
+- Cart 1-N CartItem
+- Order 1-N OrderItem
+- Product N-N CartItem
+- Product N-N OrderItem
+
+**✅ Các bảng đã được tạo tự động trong SQL Server bởi Hibernate!**
+
+---
+
+## 🚧 ĐANG THỰC HIỆN
+
+### 4. Repository Layer 🔄 **[Sắp bắt đầu]**
+Tạo các JPA Repository interfaces:
+- [ ] UserRepository extends JpaRepository
+- [ ] ProductRepository extends JpaRepository
+- [ ] CategoryRepository extends JpaRepository
+- [ ] CartRepository extends JpaRepository
+- [ ] CartItemRepository extends JpaRepository
+- [ ] OrderRepository extends JpaRepository
+- [ ] OrderItemRepository extends JpaRepository
+
+**Custom Query Methods cần thiết:**
+- findByUsername(), existsByUsername(), existsByEmail()
+- findByCategory(), findByNameContaining(), findByIsActiveTrue()
+- findByUserId(), findByUserIdOrderByCreatedAtDesc()
+
+---
+
+## 📝 CÔNG VIỆC SẮP TỚI
+
+### 5. DTO (Data Transfer Object) Classes ⏳ **[0%]**
+- [ ] RegisterRequest (username, email, password, fullName, phone, address)
+- [ ] LoginRequest (username, password)
+- [ ] JwtResponse (token, userId, username, role)
+- [ ] ProductRequest (name, description, price, image, categoryId, stock)
+- [ ] CartItemRequest (productId, quantity)
+- [ ] OrderRequest (shippingAddress, phone, note)
+- [ ] ApiResponse (message, success, data)
+
+### 6. Service Layer ⏳ **[0%]**
+
+#### UserService
+- [ ] registerUser() - Đăng ký với validation
+- [ ] loginUser() - Xác thực và tạo JWT
+- [ ] getUserByUsername()
+- [ ] getUserById()
+- [ ] isAdmin() - Kiểm tra quyền admin
+
+#### JwtTokenProvider (JWT Utility)
+- [ ] generateToken() - Tạo JWT với username & role
+- [ ] getUsernameFromToken()
+- [ ] getRoleFromToken()
+- [ ] validateToken()
+
+#### ProductService
+- [ ] getAllActiveProducts() - Danh sách sản phẩm (phân trang)
+- [ ] getProductsByCategory()
+- [ ] searchProducts()
+- [ ] getProductById()
+- [ ] createProduct() - Admin only
+- [ ] updateProduct() - Admin only
+- [ ] **deleteProduct()** - Admin only + confirm ⚠️
+- [ ] checkStock()
+- [ ] decreaseStock(), increaseStock()
+
+#### CartService
+- [ ] getCartByUserId()
+- [ ] addItemToCart()
+- [ ] updateCartItem()
+- [ ] **removeCartItem()** - Confirm required ⚠️
+- [ ] clearCart()
+- [ ] getCartTotal()
+- [ ] getCartItemCount()
+
+#### OrderService
+- [ ] createOrder() - Tạo từ giỏ hàng
+- [ ] getOrdersByUserId()
+- [ ] getOrderById()
+- [ ] getOrderItems()
+- [ ] **cancelOrder()** - Confirm + hoàn kho ⚠️
+- [ ] updateOrderStatus() - Admin only
+- [ ] getAllOrders() - Admin only
+
+#### CategoryService
+- [ ] getAllCategories()
+- [ ] getCategoryById()
+- [ ] createCategory() - Admin only
+- [ ] updateCategory() - Admin only
+- [ ] **deleteCategory()** - Confirm + check products ⚠️
+
+### 7. Security Configuration ⏳ **[0%]**
+- [ ] SecurityConfig - Spring Security config
+- [ ] JwtAuthenticationFilter - Filter xác thực JWT
+- [ ] JwtAuthenticationEntryPoint - Xử lý unauthorized
+- [ ] CustomUserDetailsService - Load user details
+
+### 8. Controller Layer ⏳ **[0%]**
+- [ ] **AuthController** - POST /register, /login
+- [ ] **ProductController** - CRUD /api/products
+- [ ] **CartController** - /api/cart
+- [ ] **OrderController** - /api/orders
+- [ ] **CategoryController** - /api/categories
+
+### 9. Exception Handling ⏳ **[0%]**
+- [ ] GlobalExceptionHandler
+- [ ] Custom Exceptions:
+  - [ ] ResourceNotFoundException
+  - [ ] UnauthorizedException
+  - [ ] ValidationException
+  - [ ] InsufficientStockException
+
+### 10. Testing & Documentation ⏳ **[0%]**
+- [ ] Unit Tests cho Services
+- [ ] Integration Tests cho Controllers
+- [ ] API Documentation (Swagger/OpenAPI)
+
+---
+
+## 🎯 TÍNH NĂNG ĐẶC BIỆT CÒN LẠI
+
+### ⚠️ Xác Nhận Trước Khi Xóa
+Cần implement popup/confirm cho:
+- Xóa sản phẩm: `?confirm=true`
+- Xóa khỏi giỏ: `?confirm=true`
+- Hủy đơn hàng: `?confirm=true`
+- Xóa danh mục: `?confirm=true`
+
+### 🔒 Security Features
+- JWT Authentication (24h expiration)
+- BCrypt Password Hashing
+- Role-based Authorization (USER, ADMIN)
+- CORS Configuration
+- CSRF Protection
+
+### ✓ Data Validation
+- Bean Validation (@NotNull, @Size, @Email, @Min)
+- Custom validators
+- Request validation trong Controller
+
+### 📦 Business Logic
+- Auto-create cart cho user mới
+- Real-time stock checking
+- Auto decrease stock khi order
+- Auto restore stock khi cancel
+- Clear cart sau khi order thành công
+
+---
+
+## 📊 TIẾN ĐỘ TỔNG QUAN
+
+| Module | Hoàn thành | Ghi chú |
+|--------|-----------|---------|
+| Project Setup | ✅ 100% | Đã kết nối SQL Server |
+| Entity Layer | ✅ 100% | 7 entities + relationships |
+| Repository | ⏳ 0% | Sắp bắt đầu |
+| DTO Classes | ⏳ 0% | - |
+| Service Layer | ⏳ 0% | - |
+| Security | ⏳ 0% | - |
+| Controller | ⏳ 0% | - |
+| Exception Handling | ⏳ 0% | - |
+| Testing | ⏳ 0% | - |
+
+**TỔNG TIẾN ĐỘ: ~25%** 🎯
+
+---
+
+## 📝 DEPENDENCIES CẦN THIẾT
+
+### Đã có trong pom.xml ✅
+```xml
+<dependencies>
+    <!-- Spring Boot Starters -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    
+    <!-- SQL Server Driver -->
+    <dependency>
+        <groupId>com.microsoft.sqlserver</groupId>
+        <artifactId>mssql-jdbc</artifactId>
+        <scope>runtime</scope>
+    </dependency>
+    
+    <!-- Lombok -->
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <optional>true</optional>
+    </dependency>
+    
+    <!-- Test -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
+```
+
+### Cần thêm vào sau ⚠️
+```xml
+<!-- Spring Security -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+
+<!-- JWT -->
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-api</artifactId>
+    <version>0.12.3</version>
+</dependency>
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-impl</artifactId>
+    <version>0.12.3</version>
+    <scope>runtime</scope>
+</dependency>
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-jackson</artifactId>
+    <version>0.12.3</version>
+    <scope>runtime</scope>
+</dependency>
+
+<!-- Validation -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-validation</artifactId>
+</dependency>
+```
+
+---
+
+## 🔧 CẤU HÌNH HIỆN TẠI
+
+### application.properties
+```properties
+# Server
+server.port=8080
+
+# SQL Server Connection - SQL Server Authentication (✅ ĐANG SỬ DỤNG)
+spring.datasource.url=jdbc:sqlserver://localhost\\SQLEXPRESS;databaseName=CosmeticShopDB;encrypt=true;trustServerCertificate=true
+spring.datasource.username=cosmetic_admin
+spring.datasource.password=YourPassword123!
+spring.datasource.driver-class-name=com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+# JPA/Hibernate
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.SQLServerDialect
+spring.jpa.properties.hibernate.format_sql=true
+
+# Logging
+logging.level.org.hibernate.SQL=DEBUG
+logging.level.org.hibernate.type.descriptor.sql.BasicBinder=TRACE
+```
+
+### ✅ Cách Kết Nối SQL Server Thành Công
+
+**Vấn đề gặp phải:**
+- Windows Authentication với `integratedSecurity=true` không hoạt động
+- Lỗi: "The TCP/IP connection to the host MSISQL-EXPRESS, port 1433 has failed"
+
+**Giải pháp đã áp dụng - SQL Server Authentication:**
+
+1. **Tạo SQL Login trong SSMS:**
+```sql
+USE master;
+GO
+
+-- Tạo login
+CREATE LOGIN cosmetic_admin WITH PASSWORD = 'YourPassword123!';
+GO
+
+-- Cho phép truy cập database
+USE CosmeticShopDB;
+GO
+
+CREATE USER cosmetic_admin FOR LOGIN cosmetic_admin;
+GO
+
+-- Phân quyền
+ALTER ROLE db_owner ADD MEMBER cosmetic_admin;
+GO
+```
+
+2. **Cập nhật application.properties:**
+- URL: `jdbc:sqlserver://localhost\\SQLEXPRESS;databaseName=CosmeticShopDB`
+- Thêm username và password
+- Bỏ `integratedSecurity=true`
+- Giữ `encrypt=true;trustServerCertificate=true`
+
+3. **Kết quả:**
+- ✅ Kết nối thành công
+- ✅ Hibernate tự động tạo 7 bảng trong database
+- ✅ Application chạy thành công trên port 8080
+
+**Lưu ý:**
+- Server name: `localhost\\SQLEXPRESS` (dùng 2 dấu backslash `\\`)
+- Không cần chỉ định port 1433 khi dùng named instance
+- SQL Server Authentication đơn giản hơn Windows Authentication cho development
+
+### Cần thêm sau:
+```properties
+# JWT Configuration
+jwt.secret=mySecretKeyForCosmeticsWebsite2024VeryLongAndSecure
+jwt.expiration=86400000
+
+# File Upload (nếu cần)
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
+```
+
+---
+
+## 🎯 BƯỚC TIẾP THEO
+
+### Ưu tiên cao:
+1. ✅ Hoàn thành setup project (DONE)
+2. ⏳ Tạo Entity classes (7 entities)
+3. ⏳ Tạo Repository interfaces
+4. ⏳ Implement Service layer
+5. ⏳ Setup Spring Security + JWT
+
+### Gợi ý thứ tự làm:
+```
+Entity → Repository → DTO → Service → Security → Controller → Exception → Testing
+```
+
+---
+
+## 📞 LƯU Ý & GHI CHÚ
+
+### ✅ Hoàn thành
+- Đã kết nối thành công SQL Server với SQL Server Authentication ✅
+- File sqljdbc_auth.dll đã được thêm vào System32 (không cần dùng)
+- Database CosmeticShopDB đã được tạo ✅
+- Maven build thành công ✅
+- Application chạy được ✅
+- 7 Entity classes đã tạo xong ✅
+- 7 bảng database đã được tạo tự động bởi Hibernate ✅
+
+### 🔧 Cấu hình đang sử dụng
+- **Authentication Method**: SQL Server Authentication
+- **Server**: localhost\\SQLEXPRESS
+- **Database**: CosmeticShopDB
+- **User**: cosmetic_admin
+- **Hibernate DDL**: update (tự động tạo/cập nhật bảng)
+
+### 📋 Bảng đã tạo trong database
+1. users
+2. categories
+3. products
+4. carts
+5. cart_items
+6. orders
+7. order_items
+
+**Sẵn sàng bắt đầu Repository Layer!** 🚀
