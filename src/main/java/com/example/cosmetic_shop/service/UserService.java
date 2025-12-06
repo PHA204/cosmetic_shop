@@ -79,4 +79,8 @@ public class UserService {
         User user = getUserByUsername(username);
         return user.getRole() == User.UserRole.ADMIN;
     }
+    public Long getUserIdByUsername(String username) {
+        User user = getUserByUsername(username);
+    return user.getId();
+}
 }

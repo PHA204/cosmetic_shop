@@ -1,0 +1,251 @@
+/* ==========================================
+   CUSTOM CSS - Cosmetic Shop
+   File: src/main/resources/static/css/style.css
+   ========================================== */
+
+/* Root Variables */
+:root {
+    --primary-color: #e91e63;
+    --secondary-color: #9c27b0;
+    --success-color: #4caf50;
+    --danger-color: #f44336;
+    --warning-color: #ff9800;
+    --info-color: #2196f3;
+    --light-color: #f8f9fa;
+    --dark-color: #212529;
+}
+
+/* Body */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* Navbar */
+.navbar-brand {
+    font-size: 1.5rem;
+}
+
+.navbar .nav-link {
+    transition: color 0.3s ease;
+}
+
+.navbar .nav-link:hover {
+    color: var(--primary-color) !important;
+}
+
+/* Product Card */
+.product-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 100%;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.product-card img {
+    height: 250px;
+    object-fit: cover;
+}
+
+.product-price {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: var(--danger-color);
+}
+
+.product-old-price {
+    text-decoration: line-through;
+    color: #999;
+    font-size: 1rem;
+}
+
+/* Category Card */
+.category-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.category-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.category-card img {
+    height: 200px;
+    object-fit: cover;
+}
+
+/* Cart */
+.cart-item img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+}
+
+.cart-summary {
+    position: sticky;
+    top: 80px;
+}
+
+/* Badge */
+.badge-status {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+/* Button */
+.btn {
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-add-cart {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border: none;
+    color: white;
+}
+
+.btn-add-cart:hover {
+    background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+}
+
+/* Form */
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(233, 30, 99, 0.25);
+}
+
+/* Hero Section */
+.hero-section {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    padding: 4rem 0;
+}
+
+/* Search Bar */
+.search-bar {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.search-bar .form-control {
+    border-radius: 50px 0 0 50px;
+    padding: 0.75rem 1.5rem;
+}
+
+.search-bar .btn {
+    border-radius: 0 50px 50px 0;
+}
+
+/* Pagination */
+.pagination .page-link {
+    color: var(--primary-color);
+}
+
+.pagination .page-item.active .page-link {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* Order Status */
+.status-pending {
+    background-color: #ffc107;
+}
+
+.status-confirmed {
+    background-color: #17a2b8;
+}
+
+.status-shipping {
+    background-color: #007bff;
+}
+
+.status-delivered {
+    background-color: #28a745;
+}
+
+.status-cancelled {
+    background-color: #dc3545;
+}
+
+/* Loading Spinner */
+.spinner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .product-card img {
+        height: 200px;
+    }
+    
+    .hero-section {
+        padding: 2rem 0;
+    }
+    
+    .search-bar {
+        max-width: 100%;
+    }
+}
+
+/* Alert */
+.alert {
+    border-radius: 10px;
+    border: none;
+}
+
+/* Card */
+.card {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* Admin Sidebar */
+.admin-sidebar {
+    min-height: calc(100vh - 56px);
+    background: var(--dark-color);
+}
+
+.admin-sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.7);
+    padding: 1rem 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.admin-sidebar .nav-link:hover,
+.admin-sidebar .nav-link.active {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+    border-left: 4px solid var(--primary-color);
+}
+
+/* Image Upload Preview */
+.image-preview {
+    max-width: 300px;
+    max-height: 300px;
+    object-fit: cover;
+    border: 2px dashed #ddd;
+    padding: 10px;
+}

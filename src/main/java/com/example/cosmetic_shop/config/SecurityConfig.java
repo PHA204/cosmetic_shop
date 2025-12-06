@@ -33,18 +33,21 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf
+                        .ignoringRequestMatchers("/api/**") // Disable CSRF cho API
+                )
                 .exceptionHandling(exception -> 
                         exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .sessionManagement(session -> 
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                        session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)) // Cho phép session cho Thymeleaf
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
+                        // ========== REST API Endpoints ==========
+                        // Public API endpoints
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         
-                        // Admin endpoints
+                        // Admin API endpoints
                         .requestMatchers(HttpMethod.POST, "/api/products/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/products/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("ADMIN")
@@ -52,11 +55,40 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/categories/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/categories/**").hasRole("ADMIN")
                         
-                        // Authenticated endpoints
+                        // ========== Thymeleaf Web Endpoints ==========
+                        // Public pages
+                        .requestMatchers("/", "/home", "/login", "/register").permitAll()
+                        .requestMatchers("/products", "/products/**").permitAll()
+                        .requestMatchers("/categories", "/categories/**").permitAll()
+                        
+                        // Static resources
+                        .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
+                        
+                        // User pages (authenticated)
+                        .requestMatchers("/cart", "/cart/**").authenticated()
+                        .requestMatchers("/orders", "/orders/**").authenticated()
+                        .requestMatchers("/profile", "/profile/**").authenticated()
+                        
+                        // Admin pages
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        
+                        // All other requests
                         .anyRequest().authenticated()
+                )
+                .formLogin(form -> form
+                        .loginPage("/login")
+                        .loginProcessingUrl("/perform-login")
+                        .defaultSuccessUrl("/", true)
+                        .failureUrl("/login?error=true")
+                        .permitAll()
+                )
+                .logout(logout -> logout
+                        .logoutUrl("/logout")
+                        .logoutSuccessUrl("/")
+                        .permitAll()
                 );
         
-        // Add JWT filter
+        // Add JWT filter chỉ cho API endpoints
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         
         return http.build();

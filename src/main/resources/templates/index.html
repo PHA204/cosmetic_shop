@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Trang chủ</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        
+        <!-- Hero Section -->
+        <section class="hero-section text-center">
+            <div class="container">
+                <h1 class="display-4 fw-bold mb-3">Chào mừng đến với Cosmetic Shop</h1>
+                <p class="lead mb-4">Mỹ phẩm chính hãng - Giá tốt - Uy tín hàng đầu</p>
+                
+                <!-- Search Bar -->
+                <div class="search-bar">
+                    <div class="input-group input-group-lg">
+                        <input type="text" class="form-control" 
+                               id="searchInput" 
+                               placeholder="Tìm kiếm sản phẩm...">
+                        <button class="btn btn-light" type="button">
+                            <i class="bi bi-search"></i> Tìm kiếm
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Categories Section -->
+        <section class="py-5">
+            <div class="container">
+                <div class="text-center mb-5">
+                    <h2 class="fw-bold">Danh Mục Sản Phẩm</h2>
+                    <p class="text-muted">Khám phá các danh mục mỹ phẩm phong phú</p>
+                </div>
+                
+                <div class="row g-4">
+                    <div class="col-md-3 col-sm-6" th:each="category : ${categories}">
+                        <a th:href="@{/categories/{id}(id=${category.id})}" 
+                           class="text-decoration-none">
+                            <div class="card category-card border-0 shadow-sm h-100">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-tag-fill fs-1 text-primary mb-3"></i>
+                                    <h5 class="card-title" th:text="${category.name}">Category</h5>
+                                    <p class="card-text text-muted small" 
+                                       th:text="${category.description}">Description</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <a th:href="@{/categories}" class="btn btn-outline-primary">
+                        Xem tất cả danh mục <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+        
+        <!-- New Products Section -->
+        <section class="py-5 bg-light">
+            <div class="container">
+                <div class="text-center mb-5">
+                    <h2 class="fw-bold">Sản Phẩm Mới Nhất</h2>
+                    <p class="text-muted">Cập nhật những sản phẩm mới nhất</p>
+                </div>
+                
+                <div class="row g-4">
+                    <div class="col-lg-3 col-md-4 col-sm-6" 
+                         th:each="product : ${newProducts}">
+                        <div class="card product-card border-0 shadow-sm">
+                            <img th:src="${product.image}" 
+                                 th:alt="${product.name}"
+                                 class="card-img-top"
+                                 onerror="this.src='https://via.placeholder.com/300x300?text=No+Image'">
+                            
+                            <div class="card-body">
+                                <span class="badge bg-success mb-2" 
+                                      th:if="${product.stock > 0}">Còn hàng</span>
+                                <span class="badge bg-danger mb-2" 
+                                      th:if="${product.stock == 0}">Hết hàng</span>
+                                
+                                <h5 class="card-title" th:text="${product.name}">Product Name</h5>
+                                
+                                <p class="card-text text-muted small" 
+                                   th:text="${#strings.abbreviate(product.description, 80)}">
+                                    Description
+                                </p>
+                                
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <span class="product-price" 
+                                              th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">
+                                            Price
+                                        </span>
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-box-seam"></i>
+                                        <span th:text="${product.stock}">0</span>
+                                    </small>
+                                </div>
+                                
+                                <div class="d-grid gap-2">
+                                    <a th:href="@{/products/{id}(id=${product.id})}" 
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-eye"></i> Xem chi tiết
+                                    </a>
+                                    <button class="btn btn-add-cart btn-sm" 
+                                            th:onclick="'addToCart(' + ${product.id} + ', 1)'"
+                                            th:disabled="${product.stock == 0}">
+                                        <i class="bi bi-cart-plus"></i> Thêm vào giỏ
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <a th:href="@{/products}" class="btn btn-primary btn-lg">
+                        Xem tất cả sản phẩm <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Features Section -->
+        <section class="py-5">
+            <div class="container">
+                <div class="row g-4 text-center">
+                    <div class="col-md-3 col-sm-6">
+                        <div class="p-4">
+                            <i class="bi bi-truck fs-1 text-primary mb-3"></i>
+                            <h5>Miễn phí vận chuyển</h5>
+                            <p class="text-muted small">Đơn hàng từ 500.000đ</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="p-4">
+                            <i class="bi bi-shield-check fs-1 text-success mb-3"></i>
+                            <h5>Hàng chính hãng 100%</h5>
+                            <p class="text-muted small">Cam kết nguồn gốc rõ ràng</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="p-4">
+                            <i class="bi bi-arrow-repeat fs-1 text-info mb-3"></i>
+                            <h5>Đổi trả trong 7 ngày</h5>
+                            <p class="text-muted small">Nếu có lỗi từ nhà sản xuất</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="p-4">
+                            <i class="bi bi-headset fs-1 text-warning mb-3"></i>
+                            <h5>Hỗ trợ 24/7</h5>
+                            <p class="text-muted small">Tư vấn nhiệt tình, chu đáo</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+    </div>
+</body>
+</html>
