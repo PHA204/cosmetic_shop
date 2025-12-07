@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin-layout}">
+<head>
+    <title>Quản Lý Đơn Hàng - Admin</title>
+</head>
+<body>
+    
+    <div layout:fragment="content">
+        <div class="container-fluid mt-4">
+            <!-- Header -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2><i class="bi bi-cart-check text-primary"></i> Quản Lý Đơn Hàng</h2>
+                            <p class="text-muted mb-0">Xem và cập nhật trạng thái đơn hàng</p>
+                        </div>
+                        <button class="btn btn-outline-primary" onclick="loadOrders()">
+                            <i class="bi bi-arrow-clockwise"></i> Làm mới
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Filters -->
+            <div class="row g-2 mb-4">
+                <div class="col-auto">
+                    <button class="btn btn-outline-secondary filter-btn active" data-status="" onclick="filterByStatus('')">
+                        <i class="bi bi-list-ul"></i> Tất cả
+                    </button>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-outline-warning filter-btn" data-status="PENDING" onclick="filterByStatus('PENDING')">
+                        <i class="bi bi-clock"></i> Chờ xác nhận
+                    </button>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-outline-info filter-btn" data-status="CONFIRMED" onclick="filterByStatus('CONFIRMED')">
+                        <i class="bi bi-check-circle"></i> Đã xác nhận
+                    </button>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-outline-primary filter-btn" data-status="SHIPPING" onclick="filterByStatus('SHIPPING')">
+                        <i class="bi bi-truck"></i> Đang giao
+                    </button>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-outline-success filter-btn" data-status="DELIVERED" onclick="filterByStatus('DELIVERED')">
+                        <i class="bi bi-check-all"></i> Đã giao
+                    </button>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-outline-danger filter-btn" data-status="CANCELLED" onclick="filterByStatus('CANCELLED')">
+                        <i class="bi bi-x-circle"></i> Đã hủy
+                    </button>
+                </div>
+            </div>
+
+            <!-- Orders Table -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Danh Sách Đơn Hàng</h5>
+                        <div class="text-muted">
+                            <span id="ordersCount">0</span> đơn hàng
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 100px;">Mã ĐH</th>
+                                    <th>Khách Hàng</th>
+                                    <th>Địa Chỉ</th>
+                                    <th>SĐT</th>
+                                    <th style="width: 120px;">Tổng Tiền</th>
+                                    <th style="width: 130px;">Trạng Thái</th>
+                                    <th style="width: 150px;">Ngày Đặt</th>
+                                    <th style="width: 100px;">Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersTableBody">
+                                <tr>
+                                    <td colspan="8" class="text-center py-5">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted">Hiển thị <span id="showingInfo">0</span></span>
+                        </div>
+                        <nav>
+                            <ul class="pagination mb-0" id="pagination"></ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Detail Modal -->
+        <div class="modal fade" id="orderDetailModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-receipt"></i> Chi Tiết Đơn Hàng #<span id="orderIdTitle"></span>
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <!-- Order Info -->
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="bi bi-info-circle"></i> Thông Tin Đơn Hàng</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <table class="table table-sm table-borderless mb-0">
+                                            <tr>
+                                                <td class="text-muted" style="width: 150px;">Mã đơn hàng:</td>
+                                                <td class="fw-bold">#<span id="detailOrderId"></span></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Khách hàng:</td>
+                                                <td id="detailUsername"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Trạng thái:</td>
+                                                <td id="detailStatus"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Ngày đặt:</td>
+                                                <td id="detailCreatedAt"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Cập nhật lần cuối:</td>
+                                                <td id="detailUpdatedAt"></td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Shipping Info -->
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="bi bi-truck"></i> Thông Tin Giao Hàng</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <table class="table table-sm table-borderless mb-0">
+                                            <tr>
+                                                <td class="text-muted" style="width: 150px;">Số điện thoại:</td>
+                                                <td id="detailPhone"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Địa chỉ:</td>
+                                                <td id="detailAddress"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Ghi chú:</td>
+                                                <td id="detailNote" class="fst-italic"></td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Order Items -->
+                            <div class="col-12 mb-3">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="bi bi-box-seam"></i> Sản Phẩm Đã Đặt</h6>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover mb-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th style="width: 80px;">Ảnh</th>
+                                                        <th>Tên Sản Phẩm</th>
+                                                        <th style="width: 120px;">Đơn Giá</th>
+                                                        <th style="width: 100px;">Số Lượng</th>
+                                                        <th style="width: 120px;">Thành Tiền</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="orderItemsTable"></tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Order Summary -->
+                            <div class="col-12">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <h6 class="mb-2">Cập Nhật Trạng Thái:</h6>
+                                                <div class="d-flex gap-2 flex-wrap" id="statusButtons">
+                                                    <!-- Dynamic buttons -->
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 text-end">
+                                                <h6 class="text-muted mb-2">Tổng cộng:</h6>
+                                                <h3 class="text-danger mb-0" id="detailTotalAmount">0₫</h3>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <th:block layout:fragment="scripts">
+        <script th:inline="javascript">
+            let currentPage = 0;
+            let currentStatus = '';
+            const pageSize = 10;
+
+            $(document).ready(function() {
+                loadOrders();
+            });
+
+            function loadOrders() {
+                let url = currentStatus 
+                    ? `/api/orders/admin/status/${currentStatus}?page=${currentPage}&size=${pageSize}`
+                    : `/api/orders/admin/all?page=${currentPage}&size=${pageSize}`;
+
+                $.get(url, function(response) {
+                    if (response.success && response.data) {
+                        displayOrders(response.data);
+                    }
+                }).fail(function() {
+                    $('#ordersTableBody').html('<tr><td colspan="8" class="text-center py-4 text-danger">Lỗi tải dữ liệu</td></tr>');
+                });
+            }
+
+            function displayOrders(data) {
+                const orders = data.content;
+                let html = '';
+
+                if (orders.length === 0) {
+                    html = '<tr><td colspan="8" class="text-center py-4 text-muted">Không có đơn hàng nào</td></tr>';
+                } else {
+                    orders.forEach(order => {
+                        const statusBadge = getOrderStatusBadge(order.status);
+                        
+                        html += `
+                            <tr>
+                                <td><strong>#${order.id}</strong></td>
+                                <td>${escapeHtml(order.username)}</td>
+                                <td><small>${escapeHtml(order.shippingAddress).substring(0, 30)}...</small></td>
+                                <td>${escapeHtml(order.phone)}</td>
+                                <td><strong class="text-danger">${formatCurrency(order.totalAmount)}</strong></td>
+                                <td>${statusBadge}</td>
+                                <td><small>${formatDateTime(order.createdAt)}</small></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetail(${order.id})">
+                                        <i class="bi bi-eye"></i> Xem
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                $('#ordersTableBody').html(html);
+                $('#ordersCount').text(data.totalElements);
+                
+                // Update showing info
+                const from = currentPage * pageSize + 1;
+                const to = Math.min((currentPage + 1) * pageSize, data.totalElements);
+                $('#showingInfo').text(`${from}-${to} trong tổng ${data.totalElements} đơn`);
+                
+                // Update pagination
+                updatePagination(data.totalPages);
+            }
+
+            function updatePagination(totalPages) {
+                let html = '';
+                
+                if (totalPages <= 1) {
+                    $('#pagination').html('');
+                    return;
+                }
+
+                html += `
+                    <li class="page-item ${currentPage === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                `;
+
+                for (let i = 0; i < totalPages; i++) {
+                    if (i === 0 || i === totalPages - 1 || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                        html += `
+                            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                                <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i + 1}</a>
+                            </li>
+                        `;
+                    } else if (i === currentPage - 3 || i === currentPage + 3) {
+                        html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                    }
+                }
+
+                html += `
+                    <li class="page-item ${currentPage === totalPages - 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                `;
+
+                $('#pagination').html(html);
+            }
+
+            function changePage(page) {
+                currentPage = page;
+                loadOrders();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            function filterByStatus(status) {
+                currentPage = 0;
+                currentStatus = status;
+                
+                // Update active button
+                $('.filter-btn').removeClass('active');
+                $(`.filter-btn[data-status="${status}"]`).addClass('active');
+                
+                loadOrders();
+            }
+
+            function viewOrderDetail(orderId) {
+                showLoading();
+                
+                $.get(`/api/orders/${orderId}`, function(response) {
+                    hideLoading();
+                    
+                    if (response.success && response.data) {
+                        displayOrderDetail(response.data);
+                        $('#orderDetailModal').modal('show');
+                    }
+                }).fail(function() {
+                    hideLoading();
+                    showMessage('Không thể tải chi tiết đơn hàng!', 'danger');
+                });
+            }
+
+            function displayOrderDetail(order) {
+                $('#orderIdTitle').text(order.id);
+                $('#detailOrderId').text(order.id);
+                $('#detailUsername').text(order.username);
+                $('#detailStatus').html(getOrderStatusBadge(order.status));
+                $('#detailCreatedAt').text(formatDateTime(order.createdAt));
+                $('#detailUpdatedAt').text(formatDateTime(order.updatedAt));
+                $('#detailPhone').text(order.phone);
+                $('#detailAddress').text(order.shippingAddress);
+                $('#detailNote').text(order.note || 'Không có ghi chú');
+                $('#detailTotalAmount').text(formatCurrency(order.totalAmount));
+
+                // Display order items
+                let itemsHtml = '';
+                order.items.forEach(item => {
+                    itemsHtml += `
+                        <tr>
+                            <td>
+                                <img src="${item.productImage || 'https://via.placeholder.com/60'}" 
+                                     class="rounded" 
+                                     style="width: 50px; height: 50px; object-fit: cover;">
+                            </td>
+                            <td>${escapeHtml(item.productName)}</td>
+                            <td>${formatCurrency(item.price)}</td>
+                            <td><strong>${item.quantity}</strong></td>
+                            <td><strong class="text-danger">${formatCurrency(item.subTotal)}</strong></td>
+                        </tr>
+                    `;
+                });
+                $('#orderItemsTable').html(itemsHtml);
+
+                // Display status update buttons
+                displayStatusButtons(order.id, order.status);
+            }
+
+            function displayStatusButtons(orderId, currentStatus) {
+                let buttonsHtml = '';
+
+                if (currentStatus === 'PENDING') {
+                    buttonsHtml += `
+                        <button class="btn btn-sm btn-info" onclick="updateOrderStatus(${orderId}, 'CONFIRMED')">
+                            <i class="bi bi-check-circle"></i> Xác Nhận
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="updateOrderStatus(${orderId}, 'CANCELLED')">
+                            <i class="bi bi-x-circle"></i> Hủy
+                        </button>
+                    `;
+                } else if (currentStatus === 'CONFIRMED') {
+                    buttonsHtml += `
+                        <button class="btn btn-sm btn-primary" onclick="updateOrderStatus(${orderId}, 'SHIPPING')">
+                            <i class="bi bi-truck"></i> Giao Hàng
+                        </button>
+                    `;
+                } else if (currentStatus === 'SHIPPING') {
+                    buttonsHtml += `
+                        <button class="btn btn-sm btn-success" onclick="updateOrderStatus(${orderId}, 'DELIVERED')">
+                            <i class="bi bi-check-all"></i> Đã Giao
+                        </button>
+                    `;
+                } else {
+                    buttonsHtml = '<span class="text-muted fst-italic">Đơn hàng đã hoàn tất hoặc bị hủy</span>';
+                }
+
+                $('#statusButtons').html(buttonsHtml);
+            }
+
+            function updateOrderStatus(orderId, newStatus) {
+                const statusNames = {
+                    'CONFIRMED': 'xác nhận',
+                    'SHIPPING': 'chuyển sang giao hàng',
+                    'DELIVERED': 'hoàn thành',
+                    'CANCELLED': 'hủy'
+                };
+
+                if (!confirm(`Bạn có chắc chắn muốn ${statusNames[newStatus]} đơn hàng này?`)) {
+                    return;
+                }
+
+                showLoading();
+
+                $.ajax({
+                    url: `/api/orders/admin/${orderId}/status?status=${newStatus}`,
+                    method: 'PUT',
+                    success: function(response) {
+                        hideLoading();
+                        showMessage('Cập nhật trạng thái thành công!', 'success');
+                        $('#orderDetailModal').modal('hide');
+                        loadOrders();
+                    },
+                    error: function(xhr) {
+                        hideLoading();
+                        const message = xhr.responseJSON?.message || 'Có lỗi xảy ra!';
+                        showMessage(message, 'danger');
+                    }
+                });
+            }
+
+            function getOrderStatusBadge(status) {
+                const badges = {
+                    'PENDING': '<span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Chờ xác nhận</span>',
+                    'CONFIRMED': '<span class="badge bg-info"><i class="bi bi-check-circle"></i> Đã xác nhận</span>',
+                    'SHIPPING': '<span class="badge bg-primary"><i class="bi bi-truck"></i> Đang giao</span>',
+                    'DELIVERED': '<span class="badge bg-success"><i class="bi bi-check-all"></i> Đã giao</span>',
+                    'CANCELLED': '<span class="badge bg-danger"><i class="bi bi-x-circle"></i> Đã hủy</span>'
+                };
+                return badges[status] || '<span class="badge bg-secondary">Không xác định</span>';
+            }
+        </script>
+    </th:block>
+</body>
+</html>

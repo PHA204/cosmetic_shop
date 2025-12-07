@@ -249,3 +249,220 @@ main {
     border: 2px dashed #ddd;
     padding: 10px;
 }
+
+/* ==========================================
+   ADMIN SIDEBAR - Thêm vào style.css
+   ========================================== */
+
+/* Admin Layout */
+.admin-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Admin Sidebar */
+.admin-sidebar {
+    width: 260px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    position: fixed;
+    top: 56px; /* Height of navbar */
+    left: 0;
+    bottom: 0;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.admin-sidebar.collapsed {
+    width: 70px;
+}
+
+.admin-sidebar-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.admin-sidebar-header h5 {
+    color: white;
+    font-weight: 600;
+    margin: 0;
+}
+
+.admin-sidebar.collapsed .admin-sidebar-header h5 {
+    display: none;
+}
+
+/* Sidebar Navigation */
+.admin-nav {
+    padding: 1rem 0;
+}
+
+.admin-nav-item {
+    margin-bottom: 0.25rem;
+}
+
+.admin-nav-link {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.admin-nav-link:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.admin-nav-link.active {
+    color: white;
+    background: rgba(255, 255, 255, 0.2);
+    border-left: 4px solid white;
+}
+
+.admin-nav-link i {
+    font-size: 1.25rem;
+    width: 30px;
+    margin-right: 0.75rem;
+}
+
+.admin-sidebar.collapsed .admin-nav-link span {
+    display: none;
+}
+
+.admin-sidebar.collapsed .admin-nav-link {
+    justify-content: center;
+    padding: 0.75rem;
+}
+
+.admin-sidebar.collapsed .admin-nav-link i {
+    margin-right: 0;
+}
+
+/* Admin Content */
+.admin-content {
+    flex: 1;
+    margin-left: 260px;
+    margin-top: 56px; /* Height of navbar */
+    background: #f8f9fa;
+    min-height: calc(100vh - 56px);
+    transition: all 0.3s ease;
+}
+
+.admin-sidebar.collapsed + .admin-content {
+    margin-left: 70px;
+}
+
+/* Sidebar Toggle Button */
+.sidebar-toggle {
+    position: fixed;
+    top: 70px;
+    left: 260px;
+    z-index: 101;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.admin-sidebar.collapsed ~ .sidebar-toggle {
+    left: 70px;
+}
+
+.sidebar-toggle:hover {
+    background: #f8f9fa;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .admin-sidebar {
+        width: 0;
+        transform: translateX(-100%);
+    }
+    
+    .admin-sidebar.show {
+        width: 260px;
+        transform: translateX(0);
+    }
+    
+    .admin-content {
+        margin-left: 0;
+    }
+    
+    .sidebar-toggle {
+        left: 10px;
+    }
+    
+    .admin-sidebar.show ~ .sidebar-toggle {
+        left: 260px;
+    }
+}
+
+/* Scrollbar Styling */
+.admin-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.admin-sidebar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.admin-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+}
+
+.admin-sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* Badge in Sidebar */
+.admin-nav-link .badge {
+    margin-left: auto;
+    font-size: 0.7rem;
+}
+
+.admin-sidebar.collapsed .admin-nav-link .badge {
+    display: none;
+}
+
+/* User Info in Sidebar */
+.admin-user-info {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: auto;
+}
+
+.admin-user-info .user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.75rem;
+}
+
+.admin-sidebar.collapsed .admin-user-info .user-details {
+    display: none;
+}
+
+.admin-sidebar.collapsed .admin-user-info {
+    justify-content: center;
+}
+
+.admin-sidebar.collapsed .admin-user-info .user-avatar {
+    margin-right: 0;
+}

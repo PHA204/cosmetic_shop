@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title layout:title-pattern="$CONTENT_TITLE - $LAYOUT_TITLE">Admin Panel - Cosmetic Shop</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+    <link th:href="@{/css/admin-style.css}" rel="stylesheet">
+    
+    <!-- Additional CSS -->
+    <th:block layout:fragment="css"></th:block>
+</head>
+<body>
+    <!-- Admin Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark admin-navbar fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" th:href="@{/admin}">
+                <i class="bi bi-speedometer2"></i> Admin Panel - Cosmetic Shop
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="adminNavbar">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/}" target="_blank">
+                            <i class="bi bi-globe"></i> Xem Website
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> 
+                            <span sec:authentication="name">Admin</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" th:href="@{/profile}">
+                                <i class="bi bi-person"></i> Hồ sơ
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form th:action="@{/logout}" method="post">
+                                    <button type="submit" class="dropdown-item text-danger">
+                                        <i class="bi bi-box-arrow-right"></i> Đăng xuất
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Admin Sidebar -->
+    <div class="admin-sidebar" id="adminSidebar">
+        <div class="admin-sidebar-header">
+            <h5><i class="bi bi-grid-3x3-gap"></i> Menu</h5>
+        </div>
+        
+        <nav class="admin-nav">
+            <ul class="nav flex-column">
+                <li class="admin-nav-item">
+                    <a th:href="@{/admin}" class="admin-nav-link" id="nav-dashboard">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="admin-nav-item">
+                    <a th:href="@{/admin/products}" class="admin-nav-link" id="nav-products">
+                        <i class="bi bi-box-seam"></i>
+                        <span>Sản Phẩm</span>
+                    </a>
+                </li>
+                <li class="admin-nav-item">
+                    <a th:href="@{/admin/categories}" class="admin-nav-link" id="nav-categories">
+                        <i class="bi bi-grid"></i>
+                        <span>Danh Mục</span>
+                    </a>
+                </li>
+                <li class="admin-nav-item">
+                    <a th:href="@{/admin/orders}" class="admin-nav-link" id="nav-orders">
+                        <i class="bi bi-cart-check"></i>
+                        <span>Đơn Hàng</span>
+                        <span class="badge bg-warning text-dark" id="pendingOrdersBadge" style="display:none;">0</span>
+                    </a>
+                </li>
+                <li class="admin-nav-item">
+                    <a th:href="@{/admin/users}" class="admin-nav-link" id="nav-users">
+                        <i class="bi bi-people"></i>
+                        <span>Người Dùng</span>
+                    </a>
+                </li>
+                 
+                 
+            </ul>
+        </nav>
+        
+        <!-- User Info at Bottom -->
+        <div class="admin-user-info d-flex align-items-center">
+            <div class="user-avatar">
+                <i class="bi bi-person"></i>
+            </div>
+            <div class="user-details">
+                <div class="fw-bold" sec:authentication="name">Admin</div>
+                <small class="text-white-50" sec:authentication="principal.username">admin@example.com</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Toggle Button -->
+    <button class="sidebar-toggle" onclick="toggleSidebar()">
+        <i class="bi bi-chevron-left" id="toggleIcon"></i>
+    </button>
+
+    <!-- Admin Content -->
+    <div class="admin-content">
+        <div layout:fragment="content">
+            <!-- Page content goes here -->
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script th:src="@{/js/main.js}"></script>
+    
+    <script>
+        // Highlight active nav item
+        $(document).ready(function() {
+            const path = window.location.pathname;
+            
+            $('.admin-nav-link').removeClass('active');
+            
+            if (path === '/admin' || path === '/admin/' || path === '/admin/dashboard') {
+                $('#nav-dashboard').addClass('active');
+            } else if (path.includes('/admin/products')) {
+                $('#nav-products').addClass('active');
+            } else if (path.includes('/admin/categories')) {
+                $('#nav-categories').addClass('active');
+            } else if (path.includes('/admin/orders')) {
+                $('#nav-orders').addClass('active');
+            } else if (path.includes('/admin/users')) {
+                $('#nav-users').addClass('active');
+            }
+        });
+
+        // Toggle Sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('adminSidebar');
+            const icon = document.getElementById('toggleIcon');
+            
+            sidebar.classList.toggle('collapsed');
+            
+            if (sidebar.classList.contains('collapsed')) {
+                icon.classList.remove('bi-chevron-left');
+                icon.classList.add('bi-chevron-right');
+            } else {
+                icon.classList.remove('bi-chevron-right');
+                icon.classList.add('bi-chevron-left');
+            }
+        }
+
+        // Mobile sidebar toggle
+        $(document).ready(function() {
+            if (window.innerWidth <= 768) {
+                $('#adminSidebar').removeClass('show');
+            }
+        });
+    </script>
+    
+    <!-- Additional Scripts -->
+    <th:block layout:fragment="scripts"></th:block>
+</body>
+</html>

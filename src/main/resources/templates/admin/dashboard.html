@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin-layout}">
+<head>
+    <title>Dashboard</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid">
+            <!-- Admin Header -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2><i class="bi bi-speedometer2 text-primary"></i> Admin Dashboard</h2>
+                            <p class="text-muted mb-0">Tổng quan hệ thống quản lý</p>
+                        </div>
+                        <div>
+                            <button class="btn btn-outline-primary" onclick="loadDashboardData()">
+                                <i class="bi bi-arrow-clockwise"></i> Làm mới
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="row g-3 mb-4">
+                <!-- Total Products -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="text-muted mb-2">Tổng Sản Phẩm</h6>
+                                    <h2 class="mb-0" id="totalProducts">0</h2>
+                                    <small class="text-success">
+                                        <i class="bi bi-arrow-up"></i> 
+                                        <span id="productsGrowth">0%</span> so với tháng trước
+                                    </small>
+                                </div>
+                                <div class="bg-primary bg-opacity-10 rounded p-3">
+                                    <i class="bi bi-box-seam text-primary fs-2"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent border-0">
+                            <a th:href="@{/admin/products}" class="text-decoration-none small">
+                                Xem chi tiết <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Total Orders -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="text-muted mb-2">Đơn Hàng</h6>
+                                    <h2 class="mb-0" id="totalOrders">0</h2>
+                                    <small class="text-info">
+                                        <span id="pendingOrders">0</span> đơn chờ xử lý
+                                    </small>
+                                </div>
+                                <div class="bg-success bg-opacity-10 rounded p-3">
+                                    <i class="bi bi-cart-check text-success fs-2"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent border-0">
+                            <a th:href="@{/admin/orders}" class="text-decoration-none small">
+                                Xem chi tiết <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Total Users -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="text-muted mb-2">Người Dùng</h6>
+                                    <h2 class="mb-0" id="totalUsers">0</h2>
+                                    <small class="text-primary">
+                                        <i class="bi bi-people"></i> 
+                                        <span id="newUsers">0</span> người mới tuần này
+                                    </small>
+                                </div>
+                                <div class="bg-info bg-opacity-10 rounded p-3">
+                                    <i class="bi bi-people text-info fs-2"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent border-0">
+                            <a th:href="@{/admin/users}" class="text-decoration-none small">
+                                Xem chi tiết <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Total Revenue -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="text-muted mb-2">Doanh Thu</h6>
+                                    <h2 class="mb-0" id="totalRevenue">0₫</h2>
+                                    <small class="text-success">
+                                        <i class="bi bi-graph-up"></i> 
+                                        Tháng này
+                                    </small>
+                                </div>
+                                <div class="bg-warning bg-opacity-10 rounded p-3">
+                                    <i class="bi bi-currency-dollar text-warning fs-2"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent border-0">
+                            <a href="#" class="text-decoration-none small">
+                                Xem báo cáo <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts and Tables -->
+            <div class="row g-3">
+                <!-- Recent Orders -->
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0 py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-clock-history text-primary"></i> 
+                                    Đơn Hàng Mới Nhất
+                                </h5>
+                                <a th:href="@{/admin/orders}" class="btn btn-sm btn-outline-primary">
+                                    Xem tất cả
+                                </a>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Mã ĐH</th>
+                                            <th>Khách Hàng</th>
+                                            <th>Tổng Tiền</th>
+                                            <th>Trạng Thái</th>
+                                            <th>Thời Gian</th>
+                                            <th>Thao Tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recentOrdersTable">
+                                        <tr>
+                                            <td colspan="6" class="text-center py-4">
+                                                <div class="spinner-border text-primary" role="status">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Status Distribution -->
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0 py-3">
+                            <h5 class="mb-0">
+                                <i class="bi bi-pie-chart text-primary"></i> 
+                                Phân Bổ Đơn Hàng
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush" id="orderStatusList">
+                                <div class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Low Stock Products -->
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0 py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-exclamation-triangle text-warning"></i> 
+                                    Sản Phẩm Sắp Hết Hàng
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush" id="lowStockList">
+                                <div class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Categories Overview -->
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0 py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-grid text-primary"></i> 
+                                    Danh Mục Sản Phẩm
+                                </h5>
+                                <a th:href="@{/admin/categories}" class="btn btn-sm btn-outline-primary">
+                                    Quản lý
+                                </a>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush" id="categoriesList">
+                                <div class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <th:block layout:fragment="scripts">
+        <script th:inline="javascript">
+            $(document).ready(function() {
+                loadDashboardData();
+            });
+
+            function loadDashboardData() {
+                loadStatistics();
+                loadRecentOrders();
+                loadOrderStatusDistribution();
+                loadLowStockProducts();
+                loadCategories();
+            }
+
+            function loadStatistics() {
+                // Load total products
+                $.get('/api/products', { page: 0, size: 1 }, function(response) {
+                    if (response.success && response.data) {
+                        $('#totalProducts').text(response.data.totalElements || 0);
+                    }
+                });
+
+                // Load total orders
+                $.get('/api/orders/admin/all', { page: 0, size: 1 }, function(response) {
+                    if (response.success && response.data) {
+                        $('#totalOrders').text(response.data.totalElements || 0);
+                    }
+                });
+
+                // Load pending orders count
+                $.get('/api/orders/admin/status/PENDING', { page: 0, size: 1 }, function(response) {
+                    if (response.success && response.data) {
+                        $('#pendingOrders').text(response.data.totalElements || 0);
+                    }
+                });
+
+                // Mock data for users and revenue
+                $('#totalUsers').text('156');
+                $('#newUsers').text('12');
+                $('#totalRevenue').text(formatCurrency(125000000));
+            }
+
+            function loadRecentOrders() {
+                $.get('/api/orders/admin/all', { page: 0, size: 5 }, function(response) {
+                    if (response.success && response.data && response.data.content) {
+                        const orders = response.data.content;
+                        let html = '';
+
+                        if (orders.length === 0) {
+                            html = '<tr><td colspan="6" class="text-center py-4 text-muted">Chưa có đơn hàng nào</td></tr>';
+                        } else {
+                            orders.forEach(order => {
+                                const statusBadge = getOrderStatusBadge(order.status);
+                                html += `
+                                    <tr>
+                                        <td><strong>#${order.id}</strong></td>
+                                        <td>${escapeHtml(order.username)}</td>
+                                        <td><strong class="text-danger">${formatCurrency(order.totalAmount)}</strong></td>
+                                        <td>${statusBadge}</td>
+                                        <td><small>${formatDateTime(order.createdAt)}</small></td>
+                                        <td>
+                                            <a href="/admin/orders" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                `;
+                            });
+                        }
+
+                        $('#recentOrdersTable').html(html);
+                    }
+                }).fail(function() {
+                    $('#recentOrdersTable').html('<tr><td colspan="6" class="text-center py-4 text-danger">Lỗi tải dữ liệu</td></tr>');
+                });
+            }
+
+            function loadOrderStatusDistribution() {
+                const statuses = ['PENDING', 'CONFIRMED', 'SHIPPING', 'DELIVERED', 'CANCELLED'];
+                const statusNames = {
+                    'PENDING': 'Chờ xác nhận',
+                    'CONFIRMED': 'Đã xác nhận',
+                    'SHIPPING': 'Đang giao',
+                    'DELIVERED': 'Đã giao',
+                    'CANCELLED': 'Đã hủy'
+                };
+                const statusColors = {
+                    'PENDING': 'warning',
+                    'CONFIRMED': 'info',
+                    'SHIPPING': 'primary',
+                    'DELIVERED': 'success',
+                    'CANCELLED': 'danger'
+                };
+
+                let completedCount = 0;
+                const statusCounts = {};
+
+                statuses.forEach(status => {
+                    $.get(`/api/orders/admin/status/${status}`, { page: 0, size: 1 }, function(response) {
+                        if (response.success && response.data) {
+                            statusCounts[status] = response.data.totalElements || 0;
+                        }
+
+                        completedCount++;
+                        if (completedCount === statuses.length) {
+                            displayOrderStatusDistribution(statusCounts, statusNames, statusColors);
+                        }
+                    });
+                });
+            }
+
+            function displayOrderStatusDistribution(counts, names, colors) {
+                let html = '';
+                let total = Object.values(counts).reduce((a, b) => a + b, 0);
+
+                Object.keys(counts).forEach(status => {
+                    const count = counts[status];
+                    const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+                    
+                    html += `
+                        <div class="list-group-item border-0 px-3 py-2">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-bold">${names[status]}</span>
+                                <span class="badge bg-${colors[status]}">${count}</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-${colors[status]}" 
+                                     style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                $('#orderStatusList').html(html);
+            }
+
+            function loadLowStockProducts() {
+                $.get('/api/products', { page: 0, size: 100 }, function(response) {
+                    if (response.success && response.data && response.data.content) {
+                        const products = response.data.content
+                            .filter(p => p.stock <= 10)
+                            .sort((a, b) => a.stock - b.stock)
+                            .slice(0, 5);
+
+                        let html = '';
+
+                        if (products.length === 0) {
+                            html = '<div class="text-center py-4 text-muted">Tất cả sản phẩm đều còn hàng</div>';
+                        } else {
+                            products.forEach(product => {
+                                const stockClass = product.stock === 0 ? 'danger' : product.stock <= 5 ? 'warning' : 'info';
+                                html += `
+                                    <div class="list-group-item border-0 px-3 py-2">
+                                        <div class="d-flex align-items-center">
+                                            <img src="${product.image || 'https://via.placeholder.com/50'}" 
+                                                 class="rounded me-3" 
+                                                 style="width: 50px; height: 50px; object-fit: cover;">
+                                            <div class="flex-grow-1">
+                                                <div class="fw-bold">${escapeHtml(product.name)}</div>
+                                                <small class="text-muted">${escapeHtml(product.categoryName)}</small>
+                                            </div>
+                                            <div class="text-end">
+                                                <span class="badge bg-${stockClass} rounded-pill">
+                                                    ${product.stock} ${product.stock === 0 ? 'Hết hàng' : 'còn'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                        }
+
+                        $('#lowStockList').html(html);
+                    }
+                }).fail(function() {
+                    $('#lowStockList').html('<div class="text-center py-4 text-danger">Lỗi tải dữ liệu</div>');
+                });
+            }
+
+            function loadCategories() {
+                $.get('/api/categories', function(response) {
+                    if (response.success && response.data) {
+                        const categories = response.data.slice(0, 5);
+                        let html = '';
+
+                        if (categories.length === 0) {
+                            html = '<div class="text-center py-4 text-muted">Chưa có danh mục nào</div>';
+                        } else {
+                            categories.forEach(category => {
+                                html += `
+                                    <div class="list-group-item border-0 px-3 py-3">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="fw-bold">${escapeHtml(category.name)}</div>
+                                                <small class="text-muted">${escapeHtml(category.description || 'Không có mô tả')}</small>
+                                            </div>
+                                            <a href="/admin/categories" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                        }
+
+                        $('#categoriesList').html(html);
+                    }
+                }).fail(function() {
+                    $('#categoriesList').html('<div class="text-center py-4 text-danger">Lỗi tải dữ liệu</div>');
+                });
+            }
+
+            function getOrderStatusBadge(status) {
+                const badges = {
+                    'PENDING': '<span class="badge bg-warning">Chờ xác nhận</span>',
+                    'CONFIRMED': '<span class="badge bg-info">Đã xác nhận</span>',
+                    'SHIPPING': '<span class="badge bg-primary">Đang giao</span>',
+                    'DELIVERED': '<span class="badge bg-success">Đã giao</span>',
+                    'CANCELLED': '<span class="badge bg-danger">Đã hủy</span>'
+                };
+                return badges[status] || '<span class="badge bg-secondary">Không xác định</span>';
+            }
+        </script>
+    </th:block>
+</body>
+</html>

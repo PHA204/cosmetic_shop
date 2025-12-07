@@ -121,6 +121,7 @@
             <groupId>org.webjars</groupId>
             <artifactId>webjars-locator-core</artifactId>
         </dependency>
+        
     </dependencies>
     
     <build>

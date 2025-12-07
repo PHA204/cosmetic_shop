@@ -1,0 +1,215 @@
+/* ==========================================
+   ADMIN CUSTOM CSS
+   File: src/main/resources/static/css/admin-style.css
+   ========================================== */
+
+/* Body */
+body {
+    background: #f8f9fa;
+    padding-top: 60px;
+}
+
+/* Admin Navbar */
+.admin-navbar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.admin-navbar .navbar-brand {
+    color: white !important;
+    font-weight: 600;
+}
+
+.admin-navbar .nav-link {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.admin-navbar .nav-link:hover {
+    color: white !important;
+}
+
+/* Admin Sidebar */
+.admin-sidebar {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    bottom: 0;
+    width: 260px;
+    background: #2c3e50;
+    color: white;
+    overflow-y: auto;
+    transition: all 0.3s ease;
+    z-index: 1000;
+    padding: 1rem 0;
+}
+
+.admin-sidebar.collapsed {
+    width: 80px;
+}
+
+.admin-sidebar-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.admin-sidebar.collapsed .admin-sidebar-header h5 {
+    display: none;
+}
+
+/* Admin Nav */
+.admin-nav {
+    padding: 0;
+}
+
+.admin-nav-item {
+    list-style: none;
+}
+
+.admin-nav-link {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.admin-nav-link:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.admin-nav-link.active {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border-left: 4px solid #667eea;
+}
+
+.admin-nav-link i {
+    font-size: 1.25rem;
+    margin-right: 1rem;
+    width: 24px;
+    text-align: center;
+}
+
+.admin-sidebar.collapsed .admin-nav-link span {
+    display: none;
+}
+
+.admin-nav-link .badge {
+    margin-left: auto;
+}
+
+/* Admin Content */
+.admin-content {
+    margin-left: 260px;
+    padding: 2rem;
+    transition: margin-left 0.3s ease;
+}
+
+.admin-sidebar.collapsed ~ .admin-content {
+    margin-left: 80px;
+}
+
+/* Sidebar Toggle Button */
+.sidebar-toggle {
+    position: fixed;
+    left: 260px;
+    top: 70px;
+    width: 30px;
+    height: 30px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1001;
+    transition: left 0.3s ease;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-sidebar.collapsed ~ .sidebar-toggle {
+    left: 80px;
+}
+
+.sidebar-toggle:hover {
+    background: #5568d3;
+}
+
+/* Admin User Info */
+.admin-user-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.75rem;
+}
+
+.user-avatar i {
+    font-size: 1.5rem;
+}
+
+.admin-sidebar.collapsed .admin-user-info .user-details {
+    display: none;
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Table */
+.table {
+    background: white;
+}
+
+.table thead {
+    background: #f8f9fa;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .admin-sidebar {
+        left: -260px;
+    }
+    
+    .admin-sidebar.show {
+        left: 0;
+    }
+    
+    .admin-content {
+        margin-left: 0;
+    }
+    
+    .sidebar-toggle {
+        left: 20px;
+    }
+    
+    body {
+        padding-top: 56px;
+    }
+}
