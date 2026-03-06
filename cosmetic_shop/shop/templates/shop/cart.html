@@ -1,0 +1,208 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}Giỏ hàng - Cosmetic Shop{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">🛒 Giỏ hàng của bạn</h1>
+
+<div class="row">
+    <div class="col-md-8">
+        <div id="cartItems">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Đang tải...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Tóm tắt đơn hàng</h5>
+                <hr>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Tạm tính:</span>
+                    <strong id="subtotal">0đ</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Phí vận chuyển:</span>
+                    <span class="text-success">Miễn phí</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between mb-3">
+                    <strong>Tổng cộng:</strong>
+                    <strong class="text-danger" id="total">0đ</strong>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <a href="{% url 'shop:checkout' %}" class="btn btn-success btn-lg" id="checkoutBtn">
+                        Thanh toán
+                    </a>
+                    <a href="{% url 'shop:product_list' %}" class="btn btn-outline-secondary">
+                        Tiếp tục mua sắm
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function loadCart() {
+    let cart = JSON.parse(localStorage.getItem('cart') || '{}');
+    let cartItemsDiv = document.getElementById('cartItems');
+    
+    if (Object.keys(cart).length === 0) {
+        cartItemsDiv.innerHTML = `
+            <div class="alert alert-info">
+                <h5>Giỏ hàng trống</h5>
+                <p>Bạn chưa có sản phẩm nào trong giỏ hàng.</p>
+                <a href="{% url 'shop:product_list' %}" class="btn btn-primary">Mua sắm ngay</a>
+            </div>
+        `;
+        document.getElementById('checkoutBtn').classList.add('disabled');
+        return;
+    }
+    
+    // Gọi API để lấy thông tin sản phẩm
+    fetch('/api/cart-items/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({cart: cart})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            console.error('Error:', data.error);
+            displayCartBasic(cart);
+            return;
+        }
+        
+        let html = '';
+        let total = 0;
+        
+        data.items.forEach(item => {
+            html += `
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-2">
+                                ${item.image ? 
+                                    `<img src="${item.image}" class="img-fluid rounded" alt="${item.name}" style="max-height: 100px; object-fit: cover;">` :
+                                    `<div class="bg-secondary text-white text-center p-3 rounded" style="height: 100px; display: flex; align-items: center; justify-content: center;"><small>No Image</small></div>`
+                                }
+                            </div>
+                            <div class="col-md-4">
+                                <h5 class="mb-1">${item.name}</h5>
+                                <p class="text-danger mb-0">${formatPrice(item.price)}đ</p>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="input-group input-group-sm">
+                                    <button class="btn btn-outline-secondary" onclick="updateQuantity(${item.id}, -1)">-</button>
+                                    <input type="number" class="form-control text-center" value="${item.quantity}" min="1" readonly>
+                                    <button class="btn btn-outline-secondary" onclick="updateQuantity(${item.id}, 1)">+</button>
+                                </div>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <strong>${formatPrice(item.subtotal)}đ</strong>
+                            </div>
+                            <div class="col-md-1 text-end">
+                                <button class="btn btn-danger btn-sm" onclick="removeFromCart(${item.id})" title="Xóa">
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            total += item.subtotal;
+        });
+        
+        cartItemsDiv.innerHTML = html;
+        document.getElementById('subtotal').textContent = formatPrice(total) + 'đ';
+        document.getElementById('total').textContent = formatPrice(total) + 'đ';
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        displayCartBasic(cart);
+    });
+}
+
+function displayCartBasic(cart) {
+    // Fallback khi API không hoạt động
+    let html = `
+        <div class="alert alert-warning">
+            <h5>Giỏ hàng của bạn</h5>
+            <p>Bạn có ${Object.keys(cart).length} sản phẩm trong giỏ hàng.</p>
+            <ul>
+    `;
+    
+    for (let [productId, qty] of Object.entries(cart)) {
+        html += `<li>Sản phẩm #${productId}: ${qty} sản phẩm</li>`;
+    }
+    
+    html += `
+            </ul>
+            <p class="mb-0"><small>Không thể tải chi tiết sản phẩm. Vui lòng thử lại.</small></p>
+        </div>
+    `;
+    
+    document.getElementById('cartItems').innerHTML = html;
+}
+
+function updateQuantity(productId, change) {
+    let cart = JSON.parse(localStorage.getItem('cart') || '{}');
+    
+    if (cart[productId]) {
+        cart[productId] += change;
+        
+        if (cart[productId] <= 0) {
+            delete cart[productId];
+        }
+        
+        localStorage.setItem('cart', JSON.stringify(cart));
+        loadCart();
+        updateCartCount();
+    }
+}
+
+function removeFromCart(productId) {
+    if (confirm('Bạn có chắc muốn xóa sản phẩm này?')) {
+        let cart = JSON.parse(localStorage.getItem('cart') || '{}');
+        delete cart[productId];
+        localStorage.setItem('cart', JSON.stringify(cart));
+        loadCart();
+        updateCartCount();
+    }
+}
+
+function formatPrice(price) {
+    return new Intl.NumberFormat('vi-VN').format(Math.round(price));
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Load giỏ hàng khi trang load
+document.addEventListener('DOMContentLoaded', loadCart);
+</script>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends 'shop/base.html' %}
+
+{% block content %}
+<div class="text-center mb-5">
+    <h1 class="display-4"> Chào mừng đến Cosmetic Shop</h1>
+    <p class="lead">Mỹ phẩm chính hãng - Tìm cửa hàng gần bạn với công nghệ GIS</p>
+    <a href="{% url 'shop:store_locator' %}" class="btn btn-primary btn-lg me-2"> Tìm cửa hàng</a>
+    <a href="{% url 'shop:product_list' %}" class="btn btn-outline-primary btn-lg">Xem sản phẩm</a>
+</div>
+
+<h3 class="mb-4">Sản phẩm nổi bật</h3>
+<div class="row">
+    {% for product in products %}
+    <div class="col-md-3 mb-4">
+        <div class="card h-100">
+            {% if product.image %}
+            <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}" style="height: 200px; object-fit: cover;">
+            {% else %}
+            <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
+                <span class="text-white">Không có ảnh</span>
+            </div>
+            {% endif %}
+            <div class="card-body">
+                <h5 class="card-title">{{ product.name }}</h5>
+                <p class="card-text text-danger fw-bold">{{ product.price|floatformat:0 }}đ</p>
+                <a href="{% url 'shop:product_detail' product.pk %}" class="btn btn-primary w-100">Xem chi tiết</a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info">
+            Chưa có sản phẩm nào. Vui lòng thêm sản phẩm trong Admin.
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-4 text-center">
+        <h3></h3>
+        <h5>Tìm cửa hàng</h5>
+        <p>Sử dụng GPS để tìm cửa hàng gần nhất</p>
+    </div>
+    <div class="col-md-4 text-center">
+        <h3></h3>
+        <h5>Theo dõi đơn hàng</h5>
+        <p>Tra cứu và theo dõi đơn hàng trên bản đồ</p>
+    </div>
+    <div class="col-md-4 text-center">
+        <h3></h3>
+        <h5>Chính hãng 100%</h5>
+        <p>Cam kết sản phẩm chính hãng</p>
+    </div>
+</div>
+{% endblock %}

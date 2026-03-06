@@ -1,0 +1,64 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}Đăng ký - Cosmetic Shop{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title text-center mb-4"> Đăng ký tài khoản</h2>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="id_username" class="form-label">Tên đăng nhập:</label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                        <div class="text-danger">{{ form.username.errors }}</div>
+                        {% endif %}
+                        <small class="text-muted">Chỉ chứa chữ cái, số và @/./+/-/_</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_password1" class="form-label">Mật khẩu:</label>
+                        {{ form.password1 }}
+                        {% if form.password1.errors %}
+                        <div class="text-danger">{{ form.password1.errors }}</div>
+                        {% endif %}
+                        <small class="text-muted">Tối thiểu 8 ký tự</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_password2" class="form-label">Xác nhận mật khẩu:</label>
+                        {{ form.password2 }}
+                        {% if form.password2.errors %}
+                        <div class="text-danger">{{ form.password2.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success btn-lg">Đăng ký</button>
+                    </div>
+                </form>
+                
+                <hr>
+                
+                <p class="text-center mb-0">
+                    Đã có tài khoản? <a href="{% url 'shop:login' %}">Đăng nhập</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    #id_username, #id_password1, #id_password2 {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+    }
+</style>
+{% endblock %}

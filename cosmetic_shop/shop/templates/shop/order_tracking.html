@@ -1,0 +1,114 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}Tra cứu đơn hàng - Cosmetic Shop{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"> Tra cứu đơn hàng</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Nhập thông tin đơn hàng</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Mã đơn hàng:</label>
+                        <input type="text" name="order_id" class="form-control" placeholder="Ví dụ: 1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Số điện thoại:</label>
+                        <input type="text" name="phone" class="form-control" placeholder="0901234567" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100"> Tra cứu</button>
+                </form>
+                
+                {% if error_message %}
+                <div class="alert alert-danger mt-3">
+                    {{ error_message }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        {% if order %}
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Đơn hàng #{{ order.id }}</h5>
+                
+                <div class="mb-3">
+                    <strong>Khách hàng:</strong> {{ order.customer_name }}<br>
+                    <strong>Số điện thoại:</strong> {{ order.phone }}<br>
+                    <strong>Địa chỉ:</strong> {{ order.address }}<br>
+                    <strong>Ngày đặt:</strong> {{ order.created_at|date:"d/m/Y H:i" }}<br>
+                    <strong>Tổng tiền:</strong> <span class="text-danger">{{ order.total|floatformat:0 }}đ</span>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Trạng thái:</strong><br>
+                    <div class="progress" style="height: 30px;">
+                        {% if order.status == 'pending' %}
+                        <div class="progress-bar bg-warning" style="width: 25%">Chờ xác nhận</div>
+                        {% elif order.status == 'confirmed' %}
+                        <div class="progress-bar bg-info" style="width: 50%">Đã xác nhận</div>
+                        {% elif order.status == 'shipping' %}
+                        <div class="progress-bar bg-primary" style="width: 75%">Đang giao</div>
+                        {% elif order.status == 'delivered' %}
+                        <div class="progress-bar bg-success" style="width: 100%">Đã giao</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <h6>Sản phẩm:</h6>
+                <ul class="list-group mb-3">
+                    {% for item in order.items.all %}
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{{ item.product.name }} x {{ item.quantity }}</span>
+                        <strong>{{ item.price|floatformat:0 }}đ</strong>
+                    </li>
+                    {% endfor %}
+                </ul>
+                
+                {% if order.latitude and order.longitude %}
+                <h6>Vị trí giao hàng:</h6>
+                <div id="orderMap" style="height: 300px; margin-top: 10px;"></div>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="card bg-light">
+            <div class="card-body text-center py-5">
+                <h5 class="text-muted">Nhập thông tin để tra cứu đơn hàng</h5>
+                <p class="text-muted">Mã đơn hàng và số điện thoại được gửi qua SMS sau khi đặt hàng</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+{% if order and order.latitude and order.longitude %}
+<script>
+var orderMap = L.map('orderMap').setView([{{ order.latitude }}, {{ order.longitude }}], 14);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap'
+}).addTo(orderMap);
+
+var deliveryIcon = L.icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+});
+
+L.marker([{{ order.latitude }}, {{ order.longitude }}], {icon: deliveryIcon})
+    .addTo(orderMap)
+    .bindPopup('📍 <b>Địa điểm giao hàng</b><br>{{ order.address }}')
+    .openPopup();
+</script>
+{% endif %}
+{% endblock %}

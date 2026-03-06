@@ -1,0 +1,36 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}Đặt hàng thành công - Cosmetic Shop{% endblock %}
+
+{% block content %}
+<div class="text-center py-5">
+    <h1 class="display-4 text-success"> Đặt hàng thành công!</h1>
+    <p class="lead">Cảm ơn bạn đã đặt hàng tại Cosmetic Shop</p>
+    
+    <div class="card mx-auto" style="max-width: 600px;">
+        <div class="card-body">
+            <h5 class="card-title">Thông tin đơn hàng #{{ order.id }}</h5>
+            <div class="text-start">
+                <p><strong>Khách hàng:</strong> {{ order.customer_name }}</p>
+                <p><strong>Số điện thoại:</strong> {{ order.phone }}</p>
+                <p><strong>Địa chỉ:</strong> {{ order.address }}</p>
+                <p><strong>Tổng tiền:</strong> <span class="text-danger">{{ order.total|floatformat:0 }}đ</span></p>
+                <p><strong>Trạng thái:</strong> <span class="badge bg-warning">{{ order.get_status_display }}</span></p>
+            </div>
+            
+            <div class="alert alert-info mt-3">
+                <strong>Lưu ý:</strong> Để tra cứu đơn hàng, bạn cần:
+                <ul class="mb-0">
+                    <li>Mã đơn hàng: <strong>{{ order.id }}</strong></li>
+                    <li>Số điện thoại: <strong>{{ order.phone }}</strong></li>
+                </ul>
+            </div>
+            
+            <div class="d-grid gap-2">
+                <a href="{% url 'shop:order_tracking' %}" class="btn btn-primary"> Tra cứu đơn hàng</a>
+                <a href="{% url 'shop:home' %}" class="btn btn-outline-secondary"> Về trang chủ</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

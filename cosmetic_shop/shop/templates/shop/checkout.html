@@ -1,0 +1,103 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}Thanh toán - Cosmetic Shop{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">💳 Thanh toán</h1>
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Thông tin giao hàng</h5>
+                <form id="checkoutForm" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="cart_data" id="cartData">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Họ và tên:</label>
+                        <input type="text" name="name" class="form-control" required 
+                               value="{% if user.is_authenticated %}{{ user.get_full_name|default:user.username }}{% endif %}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Số điện thoại:</label>
+                        <input type="tel" name="phone" class="form-control" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Địa chỉ giao hàng:</label>
+                        <textarea name="address" class="form-control" rows="3" required></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Ghi chú (tùy chọn):</label>
+                        <textarea name="note" class="form-control" rows="2"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success btn-lg w-100">
+                        Đặt hàng
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Đơn hàng của bạn</h5>
+                <hr>
+                <div id="orderSummary">
+                    <!-- Sẽ load bằng JavaScript -->
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <strong>Tổng cộng:</strong>
+                    <strong class="text-danger" id="finalTotal">0đ</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function loadOrderSummary() {
+    let cart = JSON.parse(localStorage.getItem('cart') || '{}');
+    
+    if (Object.keys(cart).length === 0) {
+        alert('Giỏ hàng trống!');
+        window.location.href = '{% url "shop:cart" %}';
+        return;
+    }
+    
+    // Lưu cart vào hidden input để submit
+    document.getElementById('cartData').value = JSON.stringify(cart);
+    
+    // Giả sử có API để lấy thông tin sản phẩm
+    // Tạm thời hiển thị số lượng
+    let summary = '<ul class="list-unstyled">';
+    for (let [productId, qty] of Object.entries(cart)) {
+        summary += `<li class="mb-2">Sản phẩm #${productId} x ${qty}</li>`;
+    }
+    summary += '</ul>';
+    
+    document.getElementById('orderSummary').innerHTML = summary;
+}
+
+document.getElementById('checkoutForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Submit form
+    this.submit();
+    
+    // Xóa giỏ hàng sau khi đặt hàng
+    localStorage.removeItem('cart');
+});
+
+document.addEventListener('DOMContentLoaded', loadOrderSummary);
+</script>
+{% endblock %}

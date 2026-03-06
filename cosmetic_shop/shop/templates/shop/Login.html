@@ -1,0 +1,54 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}Đăng nhập - Cosmetic Shop{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title text-center mb-4"> Đăng nhập</h2>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="id_username" class="form-label">Tên đăng nhập:</label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                        <div class="text-danger">{{ form.username.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_password" class="form-label">Mật khẩu:</label>
+                        {{ form.password }}
+                        {% if form.password.errors %}
+                        <div class="text-danger">{{ form.password.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">Đăng nhập</button>
+                    </div>
+                </form>
+                
+                <hr>
+                
+                <p class="text-center mb-0">
+                    Chưa có tài khoản? <a href="{% url 'shop:register' %}">Đăng ký ngay</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    #id_username, #id_password {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+    }
+</style>
+{% endblock %}

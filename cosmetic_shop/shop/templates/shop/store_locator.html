@@ -1,0 +1,115 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}Tìm cửa hàng - Cosmetic Shop{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">🗺️ Tìm cửa hàng gần bạn</h1>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Vị trí của bạn</h5>
+                <button class="btn btn-success w-100" onclick="getMyLocation()">
+                    📍 Lấy vị trí hiện tại
+                </button>
+                <small class="text-muted d-block mt-2">
+                    Cho phép trình duyệt truy cập vị trí để tìm cửa hàng gần nhất
+                </small>
+            </div>
+        </div>
+        
+        <h5>Danh sách cửa hàng</h5>
+        <div class="list-group">
+            {% for store in stores %}
+            <a href="#" class="list-group-item list-group-item-action" 
+               onclick="showStore({{ store.latitude }}, {{ store.longitude }}, '{{ store.name }}'); return false;">
+                <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">{{ store.name }}</h6>
+                    {% if store.distance %}
+                    <small class="text-success">{{ store.distance|floatformat:2 }} km</small>
+                    {% endif %}
+                </div>
+                <p class="mb-1"><small>📍 {{ store.address }}</small></p>
+                <small class="text-muted">📞 {{ store.phone }}</small>
+            </a>
+            {% empty %}
+            <div class="alert alert-warning">
+                Chưa có cửa hàng nào. Vui lòng thêm cửa hàng trong Admin.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body p-0">
+                <div id="map" style="height: 600px; width: 100%;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Khởi tạo bản đồ tại TP.HCM
+var map = L.map('map').setView([10.7769, 106.7009], 12);
+
+// Thêm tile layer từ OpenStreetMap
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(map);
+
+// Icon cho cửa hàng
+var storeIcon = L.icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34]
+});
+
+// Thêm markers cho các cửa hàng
+{% for store in stores %}
+L.marker([{{ store.latitude }}, {{ store.longitude }}], {icon: storeIcon})
+    .addTo(map)
+    .bindPopup('<b>{{ store.name }}</b><br>{{ store.address }}<br>📞 {{ store.phone }}{% if store.distance %}<br><small class="text-success">Cách bạn {{ store.distance|floatformat:2 }} km</small>{% endif %}');
+{% endfor %}
+
+// Nếu có vị trí user, hiển thị
+{% if user_lat and user_lng %}
+var userIcon = L.icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34]
+});
+
+L.marker([{{ user_lat }}, {{ user_lng }}], {icon: userIcon})
+    .addTo(map)
+    .bindPopup('📍 <b>Vị trí của bạn</b>')
+    .openPopup();
+
+map.setView([{{ user_lat }}, {{ user_lng }}], 13);
+{% endif %}
+
+function showStore(lat, lng, name) {
+    map.setView([lat, lng], 16);
+}
+
+function getMyLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+            var lat = position.coords.latitude;
+            var lng = position.coords.longitude;
+            window.location.href = '?lat=' + lat + '&lng=' + lng;
+        }, function(error) {
+            alert('Không thể lấy vị trí: ' + error.message);
+        });
+    } else {
+        alert('Trình duyệt không hỗ trợ định vị');
+    }
+}
+</script>
+{% endblock %}

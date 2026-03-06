@@ -1,0 +1,118 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}{{ product.name }} - Cosmetic Shop{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'shop:home' %}">Trang chủ</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'shop:product_list' %}">Sản phẩm</a></li>
+        <li class="breadcrumb-item active">{{ product.name }}</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-md-6">
+        {% if product.image %}
+        <img src="{{ product.image.url }}" class="img-fluid rounded" alt="{{ product.name }}">
+        {% else %}
+        <div class="bg-secondary text-white d-flex align-items-center justify-content-center rounded" style="height: 400px;">
+            <h3>Không có ảnh</h3>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-6">
+        <h1>{{ product.name }}</h1>
+        <h2 class="text-danger mb-4">{{ product.price|floatformat:0 }}đ</h2>
+        
+        <div class="mb-3">
+            <strong>Tình trạng:</strong> 
+            {% if product.stock > 0 %}
+            <span class="badge bg-success">Còn hàng ({{ product.stock }} sản phẩm)</span>
+            {% else %}
+            <span class="badge bg-danger">Hết hàng</span>
+            {% endif %}
+        </div>
+        
+        <div class="mb-4">
+            <strong>Mô tả sản phẩm:</strong>
+            <p class="mt-2">{{ product.description|linebreaks }}</p>
+        </div>
+        
+        {% if product.stock > 0 %}
+        <div class="d-grid gap-2">
+            <button class="btn btn-success btn-lg" onclick="addToCart({{ product.id }})">
+                 Thêm vào giỏ hàng
+            </button>
+            <a href="{% url 'shop:product_list' %}" class="btn btn-outline-secondary">
+                ← Tiếp tục mua sắm
+            </a>
+        </div>
+        {% else %}
+        <button class="btn btn-secondary btn-lg w-100" disabled>
+            Hết hàng
+        </button>
+        {% endif %}
+        
+        <!-- Thông báo thêm vào giỏ hàng thành công -->
+        <div id="cartAlert" class="alert alert-success mt-3" style="display: none;">
+             Đã thêm vào giỏ hàng!
+        </div>
+    </div>
+</div>
+
+<!-- Có thể thêm phần sản phẩm liên quan ở đây -->
+<div class="row mt-5">
+    <div class="col-12">
+        <h4>Sản phẩm liên quan</h4>
+        <p class="text-muted">Các sản phẩm khác bạn có thể quan tâm...</p>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function addToCart(productId) {
+    // Lấy giỏ hàng từ localStorage
+    let cart = JSON.parse(localStorage.getItem('cart') || '{}');
+    
+    // Thêm sản phẩm vào giỏ (hoặc tăng số lượng nếu đã có)
+    if (cart[productId]) {
+        cart[productId] += 1;
+    } else {
+        cart[productId] = 1;
+    }
+    
+    // Lưu lại vào localStorage
+    localStorage.setItem('cart', JSON.stringify(cart));
+    
+    // Hiển thị thông báo
+    const alert = document.getElementById('cartAlert');
+    alert.style.display = 'block';
+    
+    // Cập nhật số lượng trong giỏ hàng ở navbar (nếu có)
+    updateCartCount();
+    
+    // Ẩn thông báo sau 3 giây
+    setTimeout(() => {
+        alert.style.display = 'none';
+    }, 3000);
+}
+
+function updateCartCount() {
+    let cart = JSON.parse(localStorage.getItem('cart') || '{}');
+    let totalItems = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
+    
+    // Cập nhật badge giỏ hàng (sẽ thêm vào navbar sau)
+    const cartBadge = document.getElementById('cartBadge');
+    if (cartBadge) {
+        cartBadge.textContent = totalItems;
+        if (totalItems > 0) {
+            cartBadge.style.display = 'inline';
+        }
+    }
+}
+</script>
+{% endblock %}
