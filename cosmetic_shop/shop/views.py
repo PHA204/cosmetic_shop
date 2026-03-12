@@ -8,7 +8,7 @@ from math import radians, sin, cos, sqrt, atan2
 import json
 
 def calculate_distance(lat1, lon1, lat2, lon2):
-    """Tính khoảng cách giữa 2 điểm (km) - công thức Haversine"""
+    #Tính khoảng cách giữa 2 điểm (km) - công thức Haversine
     R = 6371  # Bán kính trái đất (km)
     
     lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
