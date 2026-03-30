@@ -1,0 +1,84 @@
+{% extends 'shop/admin/base.html' %}
+
+{% block page_title %}Quản lý đơn hàng{% endblock %}
+
+{% block content %}
+<!-- Filter -->
+<div class="mb-3">
+    <div class="btn-group" role="group">
+        <a href="{% url 'shop:admin_orders' %}" 
+           class="btn btn-{% if not current_status %}primary{% else %}outline-primary{% endif %}">
+            Tất cả ({{ orders.count }})
+        </a>
+        <a href="{% url 'shop:admin_orders' %}?status=pending" 
+           class="btn btn-{% if current_status == 'pending' %}warning{% else %}outline-warning{% endif %}">
+            Chờ xác nhận
+        </a>
+        <a href="{% url 'shop:admin_orders' %}?status=confirmed" 
+           class="btn btn-{% if current_status == 'confirmed' %}info{% else %}outline-info{% endif %}">
+            Đã xác nhận
+        </a>
+        <a href="{% url 'shop:admin_orders' %}?status=shipping" 
+           class="btn btn-{% if current_status == 'shipping' %}primary{% else %}outline-primary{% endif %}">
+            Đang giao
+        </a>
+        <a href="{% url 'shop:admin_orders' %}?status=delivered" 
+           class="btn btn-{% if current_status == 'delivered' %}success{% else %}outline-success{% endif %}">
+            Đã giao
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Mã đơn</th>
+                        <th>Khách hàng</th>
+                        <th>Số điện thoại</th>
+                        <th>Địa chỉ</th>
+                        <th>Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày đặt</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td><strong>#{{ order.id }}</strong></td>
+                        <td>{{ order.customer_name }}</td>
+                        <td>{{ order.phone }}</td>
+                        <td>{{ order.address|truncatewords:5 }}</td>
+                        <td class="text-danger fw-bold">{{ order.total|floatformat:0 }}đ</td>
+                        <td>
+                            <span class="badge bg-{% if order.status == 'pending' %}warning{% elif order.status == 'confirmed' %}info{% elif order.status == 'shipping' %}primary{% elif order.status == 'delivered' %}success{% endif %}">
+                                {{ order.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ order.created_at|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            <a href="{% url 'shop:admin_order_update' order.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i> Chi tiết
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">
+                            {% if current_status %}
+                            Không có đơn hàng nào với trạng thái này.
+                            {% else %}
+                            Chưa có đơn hàng nào.
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

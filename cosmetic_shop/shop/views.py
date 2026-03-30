@@ -2,13 +2,16 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.db.models import Sum, Count, Q
+from django.utils import timezone
+from datetime import timedelta
 from .models import Product, Store, Order, OrderItem
 from math import radians, sin, cos, sqrt, atan2
 import json
 
 def calculate_distance(lat1, lon1, lat2, lon2):
-    #Tính khoảng cách giữa 2 điểm (km) - công thức Haversine
+    """Tính khoảng cách giữa 2 điểm (km) - công thức Haversine"""
     R = 6371  # Bán kính trái đất (km)
     
     lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
@@ -19,6 +22,8 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     c = 2 * atan2(sqrt(a), sqrt(1-a))
     
     return R * c
+
+# ============== TRANG CÔNG KHAI ==============
 
 def home(request):
     products = Product.objects.all()[:8]
@@ -42,7 +47,6 @@ def store_locator(request):
         user_lat = float(lat)
         user_lng = float(lng)
         
-        # Tính khoảng cách cho mỗi cửa hàng
         store_list = list(stores)
         for store in store_list:
             store.distance = calculate_distance(
@@ -50,7 +54,6 @@ def store_locator(request):
                 store.latitude, store.longitude
             )
         
-        # Sắp xếp theo khoảng cách
         stores = sorted(store_list, key=lambda x: x.distance)
     
     return render(request, 'shop/store_locator.html', {
@@ -121,44 +124,38 @@ def logout_view(request):
 # ============== GIỎ HÀNG ==============
 
 def cart_view(request):
-    """Hiển thị giỏ hàng - chỉ render template, JavaScript sẽ xử lý"""
-    return render(request, 'shop/cart.html')
-
-def get_cart_items(request):
-    """API: Lấy thông tin sản phẩm trong giỏ hàng"""
-    from django.http import JsonResponse
-    import json
+    """Hiển thị giỏ hàng"""
+    cart_data = request.POST.get('cart_data', '{}')
     
-    if request.method == 'POST':
+    try:
+        cart = json.loads(cart_data) if cart_data != '{}' else {}
+    except:
+        cart = {}
+    
+    cart_items = []
+    total = 0
+    
+    for product_id, quantity in cart.items():
         try:
-            data = json.loads(request.body)
-            cart = data.get('cart', {})
-            
-            items = []
-            for product_id, quantity in cart.items():
-                try:
-                    product = Product.objects.get(id=int(product_id))
-                    items.append({
-                        'id': product.id,
-                        'name': product.name,
-                        'price': float(product.price),
-                        'quantity': quantity,
-                        'subtotal': float(product.price) * quantity,
-                        'image': product.image.url if product.image else None
-                    })
-                except Product.DoesNotExist:
-                    continue
-            
-            return JsonResponse({'items': items})
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
+            product = Product.objects.get(id=int(product_id))
+            subtotal = product.price * quantity
+            total += subtotal
+            cart_items.append({
+                'product': product,
+                'quantity': quantity,
+                'subtotal': subtotal
+            })
+        except Product.DoesNotExist:
+            continue
     
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
+    return render(request, 'shop/cart.html', {
+        'cart_items': cart_items,
+        'total': total
+    })
 
 def checkout(request):
     """Thanh toán"""
     if request.method == 'POST':
-        # Lấy thông tin giỏ hàng từ localStorage (gửi qua POST)
         cart_data = request.POST.get('cart_data', '{}')
         cart = json.loads(cart_data) if cart_data != '{}' else {}
         
@@ -166,15 +163,13 @@ def checkout(request):
             messages.error(request, 'Giỏ hàng trống!')
             return redirect('shop:cart')
         
-        # Tạo đơn hàng
         order = Order.objects.create(
             customer_name=request.POST.get('name'),
             phone=request.POST.get('phone'),
             address=request.POST.get('address'),
-            total=0  # Sẽ tính sau
+            total=0
         )
         
-        # Thêm các sản phẩm vào đơn hàng
         total = 0
         for product_id, quantity in cart.items():
             try:
@@ -189,7 +184,6 @@ def checkout(request):
             except Product.DoesNotExist:
                 continue
         
-        # Cập nhật tổng tiền
         order.total = total
         order.save()
         
@@ -197,3 +191,98 @@ def checkout(request):
         return render(request, 'shop/order_success.html', {'order': order})
     
     return render(request, 'shop/checkout.html')
+
+# ============== ADMIN ==============
+
+def is_staff(user):
+    """Kiểm tra user có phải staff không"""
+    return user.is_staff
+
+@login_required
+@user_passes_test(is_staff)
+def admin_dashboard(request):
+    """Trang dashboard admin"""
+    # Thống kê tổng quan
+    total_products = Product.objects.count()
+    total_orders = Order.objects.count()
+    total_stores = Store.objects.count()
+    
+    # Doanh thu
+    total_revenue = Order.objects.aggregate(Sum('total'))['total__sum'] or 0
+    
+    # Đơn hàng hôm nay
+    today = timezone.now().date()
+    orders_today = Order.objects.filter(created_at__date=today).count()
+    
+    # Đơn hàng theo trạng thái
+    pending_orders = Order.objects.filter(status='pending').count()
+    shipping_orders = Order.objects.filter(status='shipping').count()
+    delivered_orders = Order.objects.filter(status='delivered').count()
+    
+    # Sản phẩm sắp hết hàng
+    low_stock = Product.objects.filter(stock__lt=10).order_by('stock')[:5]
+    
+    # Đơn hàng gần đây
+    recent_orders = Order.objects.order_by('-created_at')[:5]
+    
+    context = {
+        'total_products': total_products,
+        'total_orders': total_orders,
+        'total_stores': total_stores,
+        'total_revenue': total_revenue,
+        'orders_today': orders_today,
+        'pending_orders': pending_orders,
+        'shipping_orders': shipping_orders,
+        'delivered_orders': delivered_orders,
+        'low_stock': low_stock,
+        'recent_orders': recent_orders,
+    }
+    
+    return render(request, 'shop/admin/dashboard.html', context)
+
+@login_required
+@user_passes_test(is_staff)
+def admin_products(request):
+    """Quản lý sản phẩm"""
+    products = Product.objects.all().order_by('-id')
+    return render(request, 'shop/admin/products.html', {'products': products})
+
+@login_required
+@user_passes_test(is_staff)
+def admin_orders(request):
+    """Quản lý đơn hàng"""
+    status = request.GET.get('status', '')
+    
+    if status:
+        orders = Order.objects.filter(status=status).order_by('-created_at')
+    else:
+        orders = Order.objects.all().order_by('-created_at')
+    
+    context = {
+        'orders': orders,
+        'current_status': status
+    }
+    return render(request, 'shop/admin/orders.html', context)
+
+@login_required
+@user_passes_test(is_staff)
+def admin_order_update(request, order_id):
+    """Cập nhật trạng thái đơn hàng"""
+    order = get_object_or_404(Order, id=order_id)
+    
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        if new_status in dict(Order.STATUS_CHOICES):
+            order.status = new_status
+            order.save()
+            messages.success(request, f'Đã cập nhật trạng thái đơn hàng #{order.id}')
+        return redirect('shop:admin_orders')
+    
+    return render(request, 'shop/admin/order_detail.html', {'order': order})
+
+@login_required
+@user_passes_test(is_staff)
+def admin_stores(request):
+    """Quản lý cửa hàng"""
+    stores = Store.objects.all()
+    return render(request, 'shop/admin/stores.html', {'stores': stores})

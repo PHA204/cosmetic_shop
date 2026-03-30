@@ -1,0 +1,105 @@
+{% extends 'shop/admin/base.html' %}
+{% load static %}
+
+{% block page_title %}Quản lý cửa hàng{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+    <div>
+        <p class="text-muted">Tổng: {{ stores.count }} cửa hàng</p>
+    </div>
+    <div>
+        <a href="/admin/shop/store/add/" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Thêm cửa hàng
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tên cửa hàng</th>
+                        <th>Địa chỉ</th>
+                        <th>Số điện thoại</th>
+                        <th>Tọa độ</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for store in stores %}
+                    <tr>
+                        <td>{{ store.id }}</td>
+                        <td><strong>{{ store.name }}</strong></td>
+                        <td>{{ store.address }}</td>
+                        <td>{{ store.phone }}</td>
+                        <td>
+                            <small class="text-muted">
+                                {{ store.latitude|floatformat:4 }}, {{ store.longitude|floatformat:4 }}
+                            </small>
+                        </td>
+                        <td>
+                            <a href="/admin/shop/store/{{ store.id }}/change/" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i> Sửa
+                            </a>
+                            <a href="{% url 'shop:store_locator' %}" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                <i class="bi bi-map"></i> Xem bản đồ
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">
+                            Chưa có cửa hàng nào. <a href="/admin/shop/store/add/">Thêm cửa hàng</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if stores %}
+<div class="card mt-3">
+    <div class="card-header bg-white">
+        <h5 class="mb-0"><i class="bi bi-map"></i> Bản đồ cửa hàng</h5>
+    </div>
+    <div class="card-body">
+        <div id="storeMap" style="height: 400px;"></div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% if stores %}
+<script>
+var map = L.map('storeMap').setView([10.7769, 106.7009], 11);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+}).addTo(map);
+
+var storeIcon = L.icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+});
+
+{% for store in stores %}
+L.marker([{{ store.latitude }}, {{ store.longitude }}], {icon: storeIcon})
+    .addTo(map)
+    .bindPopup('<b>{{ store.name }}</b><br>{{ store.address }}<br>{{ store.phone }}');
+{% endfor %}
+</script>
+{% endif %}
+{% endblock %}
