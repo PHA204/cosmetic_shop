@@ -21,7 +21,7 @@ urlpatterns = [
     # Giỏ hàng
     path('cart/', views.cart_view, name='cart'),
     path('checkout/', views.checkout, name='checkout'),
-    
+    path('api/cart-items/', views.cart_items_api, name='cart_items_api'),
     # Admin
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('admin-dashboard/products/', views.admin_products, name='admin_products'),

@@ -3,44 +3,109 @@
 {% block title %}Tìm cửa hàng - Cosmetic Shop{% endblock %}
 
 {% block content %}
-<h1 class="mb-4"> Tìm cửa hàng gần bạn</h1>
+<h1 class="mb-4">📍 Tìm cửa hàng gần bạn</h1>
 
 <div class="row">
     <div class="col-md-4">
+
+        <!-- Form tìm kiếm & lọc -->
         <div class="card mb-3">
             <div class="card-body">
-                <h5 class="card-title">Vị trí của bạn</h5>
-                <button class="btn btn-success w-100" onclick="getMyLocation()">
-                    📍 Lấy vị trí hiện tại
-                </button>
-                <small class="text-muted d-block mt-2">
-                    Cho phép trình duyệt truy cập vị trí để tìm cửa hàng gần nhất
-                </small>
+
+                <!-- Tìm kiếm tên/địa chỉ -->
+                <form method="get" id="searchForm">
+                    <input type="hidden" name="lat" value="{{ user_lat }}">
+                    <input type="hidden" name="lng" value="{{ user_lng }}">
+
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">🔍 Tìm kiếm</label>
+                        <div class="input-group">
+                            <input type="text" name="search" class="form-control"
+                                   placeholder="Tên hoặc địa chỉ..."
+                                   value="{{ search }}">
+                            <button class="btn btn-primary" type="submit">Tìm</button>
+                        </div>
+                    </div>
+
+                    <!-- Lọc khoảng cách — chỉ hiện khi đã có vị trí -->
+                    {% if user_lat and user_lng %}
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">📏 Lọc khoảng cách</label>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a href="?lat={{ user_lat }}&lng={{ user_lng }}&search={{ search }}&distance=1"
+                               class="btn btn-sm {% if max_distance == '1' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                                ≤ 1km
+                            </a>
+                            <a href="?lat={{ user_lat }}&lng={{ user_lng }}&search={{ search }}&distance=3"
+                               class="btn btn-sm {% if max_distance == '3' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                                ≤ 3km
+                            </a>
+                            <a href="?lat={{ user_lat }}&lng={{ user_lng }}&search={{ search }}&distance=5"
+                               class="btn btn-sm {% if max_distance == '5' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                                ≤ 5km
+                            </a>
+                            <a href="?lat={{ user_lat }}&lng={{ user_lng }}&search={{ search }}&distance=10"
+                               class="btn btn-sm {% if max_distance == '10' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                                ≤ 10km
+                            </a>
+                            {% if max_distance %}
+                            <a href="?lat={{ user_lat }}&lng={{ user_lng }}&search={{ search }}"
+                               class="btn btn-sm btn-outline-danger">
+                                ✕ Bỏ lọc
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Nút lấy vị trí -->
+                    <button type="button" class="btn btn-success w-100 mt-2"
+                            onclick="getMyLocation()">
+                        📍 Lấy vị trí hiện tại
+                    </button>
+                </form>
+
+                <!-- Thông báo kết quả -->
+                {% if search or max_distance %}
+                <div class="alert alert-info mt-2 mb-0 py-2">
+                    Tìm thấy <strong>{{ stores|length }}</strong> cửa hàng
+                    {% if search %}khớp "<strong>{{ search }}</strong>"{% endif %}
+                    {% if max_distance %}trong vòng <strong>{{ max_distance }}km</strong>{% endif %}
+                    — <a href="{% url 'shop:store_locator' %}">Xóa bộ lọc</a>
+                </div>
+                {% endif %}
             </div>
         </div>
-        
+
+        <!-- Danh sách cửa hàng -->
         <h5>Danh sách cửa hàng</h5>
+
+        {% if stores %}
         <div class="list-group">
             {% for store in stores %}
-            <a href="#" class="list-group-item list-group-item-action" 
+            <a href="#" class="list-group-item list-group-item-action"
                onclick="showStore({{ store.latitude }}, {{ store.longitude }}, '{{ store.name }}'); return false;">
                 <div class="d-flex w-100 justify-content-between">
                     <h6 class="mb-1">{{ store.name }}</h6>
                     {% if store.distance %}
-                    <small class="text-success">{{ store.distance|floatformat:2 }} km</small>
+                    <span class="badge bg-success">{{ store.distance|floatformat:1 }} km</span>
                     {% endif %}
                 </div>
                 <p class="mb-1"><small>📍 {{ store.address }}</small></p>
                 <small class="text-muted">📞 {{ store.phone }}</small>
             </a>
-            {% empty %}
-            <div class="alert alert-warning">
-                Chưa có cửa hàng nào. Vui lòng thêm cửa hàng trong Admin.
-            </div>
             {% endfor %}
         </div>
+        {% else %}
+        <div class="alert alert-warning">
+            Không tìm thấy cửa hàng nào.
+            <a href="{% url 'shop:store_locator' %}">Xem tất cả</a>
+        </div>
+        {% endif %}
+
     </div>
-    
+
+    <!-- Bản đồ -->
     <div class="col-md-8">
         <div class="card">
             <div class="card-body p-0">
@@ -49,41 +114,38 @@
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Khởi tạo bản đồ tại TP.HCM
 var map = L.map('map').setView([10.7769, 106.7009], 12);
 
-// Thêm tile layer từ OpenStreetMap
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO'
 }).addTo(map);
 
-// Icon cho cửa hàng
 var storeIcon = L.icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34]
+    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34]
 });
 
-// Thêm markers cho các cửa hàng
+// Vẽ markers cho các cửa hàng trong kết quả lọc
 {% for store in stores %}
 L.marker([{{ store.latitude }}, {{ store.longitude }}], {icon: storeIcon})
     .addTo(map)
-    .bindPopup('<b>{{ store.name }}</b><br>{{ store.address }}<br>📞 {{ store.phone }}{% if store.distance %}<br><small class="text-success">Cách bạn {{ store.distance|floatformat:2 }} km</small>{% endif %}');
+    .bindPopup(
+        '<b>{{ store.name }}</b><br>' +
+        '{{ store.address }}<br>' +
+        '📞 {{ store.phone }}' +
+        '{% if store.distance %}<br><span class="text-success">📏 {{ store.distance|floatformat:1 }} km</span>{% endif %}'
+    );
 {% endfor %}
 
-// Nếu có vị trí user, hiển thị
+// Marker vị trí người dùng
 {% if user_lat and user_lng %}
 var userIcon = L.icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34]
+    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34]
 });
 
 L.marker([{{ user_lat }}, {{ user_lng }}], {icon: userIcon})
@@ -92,6 +154,18 @@ L.marker([{{ user_lat }}, {{ user_lng }}], {icon: userIcon})
     .openPopup();
 
 map.setView([{{ user_lat }}, {{ user_lng }}], 13);
+
+// Vẽ vòng tròn bán kính nếu có lọc khoảng cách
+{% if max_distance %}
+L.circle([{{ user_lat }}, {{ user_lng }}], {
+    radius: {{ max_distance }} * 1000,
+    color: '#0d6efd',
+    fillColor: '#0d6efd',
+    fillOpacity: 0.08,
+    weight: 2,
+    dashArray: '6'
+}).addTo(map).bindPopup('Bán kính {{ max_distance }}km');
+{% endif %}
 {% endif %}
 
 function showStore(lat, lng, name) {
@@ -103,7 +177,12 @@ function getMyLocation() {
         navigator.geolocation.getCurrentPosition(function(position) {
             var lat = position.coords.latitude;
             var lng = position.coords.longitude;
-            window.location.href = '?lat=' + lat + '&lng=' + lng;
+            var search = document.querySelector('input[name=search]').value;
+            var distance = '{{ max_distance }}';
+            var url = '?lat=' + lat + '&lng=' + lng;
+            if (search) url += '&search=' + search;
+            if (distance) url += '&distance=' + distance;
+            window.location.href = url;
         }, function(error) {
             alert('Không thể lấy vị trí: ' + error.message);
         });
