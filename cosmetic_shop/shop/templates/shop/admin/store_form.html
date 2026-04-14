@@ -1,0 +1,126 @@
+{% extends 'shop/admin/base.html' %}
+
+{% block page_title %}{{ action }} cửa hàng{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'shop:admin_stores' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Quay lại
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tên cửa hàng <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" required
+                               value="{{ store.name|default:'' }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Địa chỉ <span class="text-danger">*</span></label>
+                        <input type="text" name="address" class="form-control" required
+                               value="{{ store.address|default:'' }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Số điện thoại</label>
+                        <input type="text" name="phone" class="form-control"
+                               value="{{ store.phone|default:'' }}">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Vĩ độ (Latitude)</label>
+                            <input type="number" name="latitude" id="latInput" class="form-control"
+                                   step="any" required
+                                   value="{{ store.latitude|default:'' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Kinh độ (Longitude)</label>
+                            <input type="number" name="longitude" id="lngInput" class="form-control"
+                                   step="any" required
+                                   value="{{ store.longitude|default:'' }}">
+                        </div>
+                    </div>
+
+                    <small class="text-muted d-block mb-3">
+                        <i class="bi bi-info-circle"></i> Nhấp vào bản đồ bên phải để chọn tọa độ tự động.
+                    </small>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> {{ action }} cửa hàng
+                        </button>
+                        <a href="{% url 'shop:admin_stores' %}" class="btn btn-outline-secondary">Hủy</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header bg-white">
+                <small class="text-muted"><i class="bi bi-hand-index"></i> Nhấp vào bản đồ để chọn vị trí</small>
+            </div>
+            <div class="card-body p-0">
+                <div id="mapPicker" style="height: 450px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const initLat = {{ store.latitude|default:"10.7769" }};
+const initLng = {{ store.longitude|default:"106.7009" }};
+
+const map = L.map('mapPicker').setView([initLat, initLng], 13);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO'
+}).addTo(map);
+
+let marker = L.marker([initLat, initLng], { draggable: true }).addTo(map);
+
+function updateInputs(lat, lng) {
+    document.getElementById('latInput').value = lat.toFixed(6);
+    document.getElementById('lngInput').value = lng.toFixed(6);
+}
+
+// Kéo marker
+marker.on('dragend', function(e) {
+    const pos = e.target.getLatLng();
+    updateInputs(pos.lat, pos.lng);
+});
+
+// Nhấp vào bản đồ
+map.on('click', function(e) {
+    marker.setLatLng(e.latlng);
+    updateInputs(e.latlng.lat, e.latlng.lng);
+});
+
+// Sync input → marker
+['latInput', 'lngInput'].forEach(id => {
+    document.getElementById(id).addEventListener('change', function() {
+        const lat = parseFloat(document.getElementById('latInput').value);
+        const lng = parseFloat(document.getElementById('lngInput').value);
+        if (!isNaN(lat) && !isNaN(lng)) {
+            marker.setLatLng([lat, lng]);
+            map.setView([lat, lng], 14);
+        }
+    });
+});
+</script>
+{% endblock %}

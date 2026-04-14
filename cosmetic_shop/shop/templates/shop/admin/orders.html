@@ -3,37 +3,39 @@
 {% block page_title %}Quản lý đơn hàng{% endblock %}
 
 {% block content %}
-<!-- Filter -->
-<div class="mb-3">
-    <div class="btn-group" role="group">
-        <a href="{% url 'shop:admin_orders' %}" 
-           class="btn btn-{% if not current_status %}primary{% else %}outline-primary{% endif %}">
-            Tất cả ({{ orders.count }})
-        </a>
-        <a href="{% url 'shop:admin_orders' %}?status=pending" 
-           class="btn btn-{% if current_status == 'pending' %}warning{% else %}outline-warning{% endif %}">
-            Chờ xác nhận
-        </a>
-        <a href="{% url 'shop:admin_orders' %}?status=confirmed" 
-           class="btn btn-{% if current_status == 'confirmed' %}info{% else %}outline-info{% endif %}">
-            Đã xác nhận
-        </a>
-        <a href="{% url 'shop:admin_orders' %}?status=shipping" 
-           class="btn btn-{% if current_status == 'shipping' %}primary{% else %}outline-primary{% endif %}">
-            Đang giao
-        </a>
-        <a href="{% url 'shop:admin_orders' %}?status=delivered" 
-           class="btn btn-{% if current_status == 'delivered' %}success{% else %}outline-success{% endif %}">
-            Đã giao
-        </a>
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <!-- Filter trạng thái -->
+    <div class="btn-group flex-wrap" role="group">
+        <a href="{% url 'shop:admin_orders' %}{% if search %}?search={{ search }}{% endif %}"
+           class="btn btn-{% if not current_status %}primary{% else %}outline-primary{% endif %}">Tất cả</a>
+        <a href="{% url 'shop:admin_orders' %}?status=pending{% if search %}&search={{ search }}{% endif %}"
+           class="btn btn-{% if current_status == 'pending' %}warning{% else %}outline-warning{% endif %}">Chờ xác nhận</a>
+        <a href="{% url 'shop:admin_orders' %}?status=confirmed{% if search %}&search={{ search }}{% endif %}"
+           class="btn btn-{% if current_status == 'confirmed' %}info{% else %}outline-info{% endif %}">Đã xác nhận</a>
+        <a href="{% url 'shop:admin_orders' %}?status=shipping{% if search %}&search={{ search }}{% endif %}"
+           class="btn btn-{% if current_status == 'shipping' %}primary{% else %}outline-primary{% endif %}">Đang giao</a>
+        <a href="{% url 'shop:admin_orders' %}?status=delivered{% if search %}&search={{ search }}{% endif %}"
+           class="btn btn-{% if current_status == 'delivered' %}success{% else %}outline-success{% endif %}">Đã giao</a>
     </div>
+
+    <!-- Tìm kiếm -->
+    <form method="get" class="d-flex gap-2">
+        {% if current_status %}<input type="hidden" name="status" value="{{ current_status }}">{% endif %}
+        <input type="text" name="search" class="form-control" placeholder="Tên hoặc SĐT..."
+               value="{{ search }}" style="width: 220px;">
+        <button class="btn btn-outline-primary">Tìm</button>
+        {% if search %}
+        <a href="{% url 'shop:admin_orders' %}{% if current_status %}?status={{ current_status }}{% endif %}"
+           class="btn btn-outline-secondary">✕</a>
+        {% endif %}
+    </form>
 </div>
 
 <div class="card">
-    <div class="card-body">
+    <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
                     <tr>
                         <th>Mã đơn</th>
                         <th>Khách hàng</th>
@@ -54,26 +56,27 @@
                         <td>{{ order.address|truncatewords:5 }}</td>
                         <td class="text-danger fw-bold">{{ order.total|floatformat:0 }}đ</td>
                         <td>
-                            <span class="badge bg-{% if order.status == 'pending' %}warning{% elif order.status == 'confirmed' %}info{% elif order.status == 'shipping' %}primary{% elif order.status == 'delivered' %}success{% endif %}">
+                            <span class="badge bg-{% if order.status == 'pending' %}warning{% elif order.status == 'confirmed' %}info{% elif order.status == 'shipping' %}primary{% else %}success{% endif %}">
                                 {{ order.get_status_display }}
                             </span>
                         </td>
                         <td>{{ order.created_at|date:"d/m/Y H:i" }}</td>
                         <td>
-                            <a href="{% url 'shop:admin_order_update' order.id %}" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-pencil"></i> Chi tiết
-                            </a>
+                            <div class="d-flex gap-1">
+                                <a href="{% url 'shop:admin_order_update' order.id %}"
+                                   class="btn btn-sm btn-outline-primary" title="Chi tiết / Cập nhật">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'shop:admin_order_delete' order.id %}"
+                                   class="btn btn-sm btn-outline-danger" title="Xóa">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="8" class="text-center text-muted">
-                            {% if current_status %}
-                            Không có đơn hàng nào với trạng thái này.
-                            {% else %}
-                            Chưa có đơn hàng nào.
-                            {% endif %}
-                        </td>
+                        <td colspan="8" class="text-center text-muted py-4">Không có đơn hàng nào.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

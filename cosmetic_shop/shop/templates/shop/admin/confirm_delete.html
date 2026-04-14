@@ -1,0 +1,26 @@
+{% extends 'shop/admin/base.html' %}
+
+{% block page_title %}Xác nhận xóa{% endblock %}
+
+{% block content %}
+<div class="card border-danger" style="max-width: 500px;">
+    <div class="card-header bg-danger text-white">
+        <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Xác nhận xóa</h5>
+    </div>
+    <div class="card-body">
+        <p class="mb-1">Bạn có chắc chắn muốn xóa {{ object_type }}:</p>
+        <p class="fw-bold fs-5">{{ object }}</p>
+        <p class="text-danger small">Hành động này không thể hoàn tác.</p>
+
+        <div class="d-flex gap-2 mt-3">
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash"></i> Xác nhận xóa
+                </button>
+            </form>
+            <a href="{% url cancel_url %}" class="btn btn-outline-secondary">Hủy</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

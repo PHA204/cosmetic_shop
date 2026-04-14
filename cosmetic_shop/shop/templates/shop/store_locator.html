@@ -2,21 +2,46 @@
 
 {% block title %}Tìm cửa hàng - Cosmetic Shop{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+<style>
+    /* ── Panel chỉ đường ── */
+    .leaflet-routing-container {
+        background: #fff;
+        padding: 8px 12px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.2);
+        max-height: 220px;
+        overflow-y: auto;
+        font-size: .82rem;
+        max-width: 280px;
+    }
+    .store-item.active-store {
+        background-color: #e8f4ff;
+        border-left: 4px solid #0d6efd;
+    }
+    #routeInfo {
+        font-size: .9rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <h1 class="mb-4">📍 Tìm cửa hàng gần bạn</h1>
 
 <div class="row">
+    <!-- ── Cột trái ── -->
     <div class="col-md-4">
 
         <!-- Form tìm kiếm & lọc -->
         <div class="card mb-3">
             <div class="card-body">
-
-                <!-- Tìm kiếm tên/địa chỉ -->
                 <form method="get" id="searchForm">
-                    <input type="hidden" name="lat" value="{{ user_lat }}">
-                    <input type="hidden" name="lng" value="{{ user_lng }}">
+                    <input type="hidden" name="lat"  id="hiddenLat"  value="{{ user_lat }}">
+                    <input type="hidden" name="lng"  id="hiddenLng"  value="{{ user_lng }}">
 
+                    <!-- Tìm kiếm tên/địa chỉ -->
                     <div class="mb-2">
                         <label class="form-label fw-bold">🔍 Tìm kiếm</label>
                         <div class="input-group">
@@ -50,9 +75,7 @@
                             </a>
                             {% if max_distance %}
                             <a href="?lat={{ user_lat }}&lng={{ user_lng }}&search={{ search }}"
-                               class="btn btn-sm btn-outline-danger">
-                                ✕ Bỏ lọc
-                            </a>
+                               class="btn btn-sm btn-outline-danger">✕ Bỏ lọc</a>
                             {% endif %}
                         </div>
                     </div>
@@ -65,7 +88,6 @@
                     </button>
                 </form>
 
-                <!-- Thông báo kết quả -->
                 {% if search or max_distance %}
                 <div class="alert alert-info mt-2 mb-0 py-2">
                     Tìm thấy <strong>{{ stores|length }}</strong> cửa hàng
@@ -77,23 +99,47 @@
             </div>
         </div>
 
+        <!-- Thông tin tuyến đường -->
+        <div id="routeInfoCard" class="card mb-3 border-primary" style="display:none;">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">🗺️ Chỉ đường</h6>
+                    <button class="btn btn-sm btn-outline-danger" onclick="clearRoute()">✕ Xóa</button>
+                </div>
+                <div id="routeInfo" class="mt-2 text-muted">Đang tính...</div>
+            </div>
+        </div>
+
         <!-- Danh sách cửa hàng -->
-        <h5>Danh sách cửa hàng</h5>
+        <h5>Danh sách cửa hàng
+            <small class="text-muted fs-6">({{ stores|length }})</small>
+        </h5>
 
         {% if stores %}
-        <div class="list-group">
+        <div class="list-group" id="storeList">
             {% for store in stores %}
-            <a href="#" class="list-group-item list-group-item-action"
-               onclick="showStore({{ store.latitude }}, {{ store.longitude }}, '{{ store.name }}'); return false;">
+            <div class="list-group-item list-group-item-action store-item"
+                 id="store-item-{{ forloop.counter0 }}"
+                 style="cursor:pointer;"
+                 onclick="focusStore({{ forloop.counter0 }})">
                 <div class="d-flex w-100 justify-content-between">
                     <h6 class="mb-1">{{ store.name }}</h6>
                     {% if store.distance %}
-                    <span class="badge bg-success">{{ store.distance|floatformat:1 }} km</span>
+                    <span class="badge bg-success align-self-start">{{ store.distance|floatformat:1 }} km</span>
                     {% endif %}
                 </div>
                 <p class="mb-1"><small>📍 {{ store.address }}</small></p>
                 <small class="text-muted">📞 {{ store.phone }}</small>
-            </a>
+
+                {% if user_lat and user_lng %}
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-primary w-100"
+                            onclick="event.stopPropagation(); routeTo({{ store.latitude }}, {{ store.longitude }}, '{{ store.name|escapejs }}')">
+                        🚗 Chỉ đường đến đây
+                    </button>
+                </div>
+                {% endif %}
+            </div>
             {% endfor %}
         </div>
         {% else %}
@@ -105,90 +151,218 @@
 
     </div>
 
-    <!-- Bản đồ -->
+    <!-- ── Bản đồ ── -->
     <div class="col-md-8">
         <div class="card">
             <div class="card-body p-0">
-                <div id="map" style="height: 600px; width: 100%;"></div>
+                <div id="map" style="height: 620px; width: 100%;"></div>
             </div>
         </div>
+        {% if not user_lat %}
+        <div class="alert alert-info mt-2 py-2">
+            💡 Nhấn <strong>"Lấy vị trí hiện tại"</strong> để bật tính năng <strong>chỉ đường</strong> và lọc khoảng cách.
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
 <script>
-var map = L.map('map').setView([10.7769, 106.7009], 12);
+/* ═══════════════════════════════════════════════════
+   Dữ liệu từ Django template
+   ═══════════════════════════════════════════════════ */
+const USER_LAT  = {{ user_lat|default:"null" }};
+const USER_LNG  = {{ user_lng|default:"null" }};
+
+const STORES = [
+    {% for store in stores %}
+    {
+        lat:     {{ store.latitude }},
+        lng:     {{ store.longitude }},
+        name:    "{{ store.name|escapejs }}",
+        address: "{{ store.address|escapejs }}",
+        phone:   "{{ store.phone|escapejs }}",
+        distance: {% if store.distance %}"{{ store.distance|floatformat:1 }} km"{% else %}null{% endif %}
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+
+/* ═══════════════════════════════════════════════════
+   Khởi tạo bản đồ
+   ═══════════════════════════════════════════════════ */
+const map = L.map('map').setView([10.7769, 106.7009], 12);
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
     attribution: '© OpenStreetMap © CARTO'
 }).addTo(map);
 
-var storeIcon = L.icon({
-    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34]
+/* ── Icon cửa hàng ── */
+const storeIcon = L.icon({
+    iconUrl:    'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+    iconSize:   [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor:[1, -34]
 });
 
-// Vẽ markers cho các cửa hàng trong kết quả lọc
-{% for store in stores %}
-L.marker([{{ store.latitude }}, {{ store.longitude }}], {icon: storeIcon})
-    .addTo(map)
-    .bindPopup(
-        '<b>{{ store.name }}</b><br>' +
-        '{{ store.address }}<br>' +
-        '📞 {{ store.phone }}' +
-        '{% if store.distance %}<br><span class="text-success">📏 {{ store.distance|floatformat:1 }} km</span>{% endif %}'
-    );
-{% endfor %}
-
-// Marker vị trí người dùng
-{% if user_lat and user_lng %}
-var userIcon = L.icon({
-    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34]
+/* ── Icon người dùng ── */
+const userIcon = L.icon({
+    iconUrl:    'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+    iconSize:   [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor:[1, -34]
 });
 
-L.marker([{{ user_lat }}, {{ user_lng }}], {icon: userIcon})
-    .addTo(map)
-    .bindPopup('📍 <b>Vị trí của bạn</b>')
-    .openPopup();
+/* ── Đặt marker cửa hàng ── */
+const storeMarkers = STORES.map((s, i) => {
+    const marker = L.marker([s.lat, s.lng], { icon: storeIcon })
+        .addTo(map)
+        .bindPopup(
+            `<b>${s.name}</b><br>${s.address}<br>📞 ${s.phone}` +
+            (s.distance ? `<br><span class="text-success">📏 ${s.distance}</span>` : '') +
+            (USER_LAT !== null
+                ? `<br><br><button class="btn btn-sm btn-primary w-100 mt-1"
+                        onclick="routeTo(${s.lat}, ${s.lng}, '${s.name.replace(/'/g,"\\'")}')">
+                        🚗 Chỉ đường
+                   </button>`
+                : '')
+        );
+    marker.on('click', () => highlightListItem(i));
+    return marker;
+});
 
-map.setView([{{ user_lat }}, {{ user_lng }}], 13);
+/* ── Marker vị trí người dùng ── */
+let userMarker = null;
+if (USER_LAT !== null) {
+    userMarker = L.marker([USER_LAT, USER_LNG], { icon: userIcon })
+        .addTo(map)
+        .bindPopup('📍 <b>Vị trí của bạn</b>')
+        .openPopup();
+    map.setView([USER_LAT, USER_LNG], 13);
 
-// Vẽ vòng tròn bán kính nếu có lọc khoảng cách
-{% if max_distance %}
-L.circle([{{ user_lat }}, {{ user_lng }}], {
-    radius: {{ max_distance }} * 1000,
-    color: '#0d6efd',
-    fillColor: '#0d6efd',
-    fillOpacity: 0.08,
-    weight: 2,
-    dashArray: '6'
-}).addTo(map).bindPopup('Bán kính {{ max_distance }}km');
-{% endif %}
-{% endif %}
-
-function showStore(lat, lng, name) {
-    map.setView([lat, lng], 16);
+    {% if max_distance %}
+    L.circle([USER_LAT, USER_LNG], {
+        radius:      {{ max_distance }} * 1000,
+        color:       '#0d6efd',
+        fillColor:   '#0d6efd',
+        fillOpacity: 0.07,
+        weight:      2,
+        dashArray:   '6'
+    }).addTo(map).bindPopup('Bán kính {{ max_distance }}km');
+    {% endif %}
 }
 
-function getMyLocation() {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(function(position) {
-            var lat = position.coords.latitude;
-            var lng = position.coords.longitude;
-            var search = document.querySelector('input[name=search]').value;
-            var distance = '{{ max_distance }}';
-            var url = '?lat=' + lat + '&lng=' + lng;
-            if (search) url += '&search=' + search;
-            if (distance) url += '&distance=' + distance;
-            window.location.href = url;
-        }, function(error) {
-            alert('Không thể lấy vị trí: ' + error.message);
-        });
-    } else {
-        alert('Trình duyệt không hỗ trợ định vị');
+/* ═══════════════════════════════════════════════════
+   Routing (Leaflet Routing Machine — OSRM public)
+   ═══════════════════════════════════════════════════ */
+let routingControl = null;
+
+function routeTo(destLat, destLng, storeName) {
+    if (USER_LAT === null) {
+        alert('Vui lòng lấy vị trí hiện tại trước!');
+        return;
+    }
+
+    /* Xóa tuyến đường cũ nếu có */
+    if (routingControl) {
+        map.removeControl(routingControl);
+        routingControl = null;
+    }
+
+    document.getElementById('routeInfoCard').style.display = 'block';
+    document.getElementById('routeInfo').textContent = 'Đang tính tuyến đường...';
+
+    routingControl = L.Routing.control({
+        waypoints: [
+            L.latLng(USER_LAT, USER_LNG),
+            L.latLng(destLat, destLng)
+        ],
+        router: L.Routing.osrmv1({
+            serviceUrl: 'https://router.project-osrm.org/route/v1',
+            profile: 'driving'
+        }),
+        lineOptions: {
+            styles: [{ color: '#0d6efd', weight: 5, opacity: 0.85 }]
+        },
+        show: false,               // Ẩn panel mặc định của LRM (tự build)
+        addWaypoints: false,
+        routeWhileDragging: false,
+        fitSelectedRoutes: true,
+        showAlternatives: false,
+        createMarker: function() { return null; }   // Dùng marker có sẵn
+    })
+    .on('routesfound', function(e) {
+        const route   = e.routes[0];
+        const dist    = (route.summary.totalDistance / 1000).toFixed(1);   // km
+        const timeMin = Math.round(route.summary.totalTime / 60);
+        document.getElementById('routeInfo').innerHTML =
+            `<strong>🏪 ${storeName}</strong><br>
+             📏 Khoảng cách: <strong>${dist} km</strong><br>
+             ⏱️ Thời gian ước tính: <strong>${timeMin} phút</strong>`;
+    })
+    .on('routingerror', function() {
+        document.getElementById('routeInfo').innerHTML =
+            '<span class="text-danger">Không thể tính tuyến đường. Vui lòng thử lại.</span>';
+    })
+    .addTo(map);
+}
+
+function clearRoute() {
+    if (routingControl) {
+        map.removeControl(routingControl);
+        routingControl = null;
+    }
+    document.getElementById('routeInfoCard').style.display = 'none';
+}
+
+/* ═══════════════════════════════════════════════════
+   Tương tác danh sách & bản đồ
+   ═══════════════════════════════════════════════════ */
+function focusStore(index) {
+    const s = STORES[index];
+    map.setView([s.lat, s.lng], 16);
+    storeMarkers[index].openPopup();
+    highlightListItem(index);
+}
+
+function highlightListItem(index) {
+    document.querySelectorAll('.store-item').forEach(el => el.classList.remove('active-store'));
+    const item = document.getElementById('store-item-' + index);
+    if (item) {
+        item.classList.add('active-store');
+        item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 }
+
+/* ═══════════════════════════════════════════════════
+   Lấy vị trí hiện tại
+   ═══════════════════════════════════════════════════ */
+function getMyLocation() {
+    if (!navigator.geolocation) {
+        alert('Trình duyệt không hỗ trợ định vị.');
+        return;
+    }
+    navigator.geolocation.getCurrentPosition(
+        function(pos) {
+            const lat  = pos.coords.latitude;
+            const lng  = pos.coords.longitude;
+            const search   = document.querySelector('input[name=search]').value;
+            const distance = '{{ max_distance }}';
+            let url = `?lat=${lat}&lng=${lng}`;
+            if (search)   url += `&search=${encodeURIComponent(search)}`;
+            if (distance) url += `&distance=${distance}`;
+            window.location.href = url;
+        },
+        function(err) {
+            alert('Không thể lấy vị trí: ' + err.message);
+        }
+    );
+}
+
+/* ── Đồng bộ hidden inputs trước khi submit form ── */
+document.getElementById('searchForm').addEventListener('submit', function() {
+    /* Giữ nguyên lat/lng đã có trong hidden input */
+});
 </script>
 {% endblock %}

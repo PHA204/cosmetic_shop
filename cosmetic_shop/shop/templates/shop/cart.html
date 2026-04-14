@@ -9,13 +9,11 @@
     <div class="col-md-8">
         <div id="cartItems">
             <div class="text-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Đang tải...</span>
-                </div>
+                <div class="spinner-border text-primary" role="status"></div>
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-4">
         <div class="card">
             <div class="card-body">
@@ -34,7 +32,6 @@
                     <strong>Tổng cộng:</strong>
                     <strong class="text-danger" id="total">0đ</strong>
                 </div>
-                
                 <div class="d-grid gap-2">
                     <a href="{% url 'shop:checkout' %}" class="btn btn-success btn-lg" id="checkoutBtn">
                         Thanh toán
@@ -47,162 +44,186 @@
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function loadCart() {
-    let cart = JSON.parse(localStorage.getItem('cart') || '{}');
-    let cartItemsDiv = document.getElementById('cartItems');
-    
+/* ── Tiện ích ── */
+function formatPrice(n) {
+    return new Intl.NumberFormat('vi-VN').format(Math.round(n));
+}
+
+function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^|;)\\s*' + name + '=([^;]+)'));
+    return match ? decodeURIComponent(match[2]) : null;
+}
+
+/* ── Render giỏ hàng từ API ── */
+async function loadCart() {
+    const cart = JSON.parse(localStorage.getItem('cart') || '{}');
+    const cartItemsDiv = document.getElementById('cartItems');
+
     if (Object.keys(cart).length === 0) {
         cartItemsDiv.innerHTML = `
             <div class="alert alert-info">
                 <h5>Giỏ hàng trống</h5>
                 <p>Bạn chưa có sản phẩm nào trong giỏ hàng.</p>
                 <a href="{% url 'shop:product_list' %}" class="btn btn-primary">Mua sắm ngay</a>
-            </div>
-        `;
+            </div>`;
         document.getElementById('checkoutBtn').classList.add('disabled');
+        document.getElementById('subtotal').textContent = '0đ';
+        document.getElementById('total').textContent = '0đ';
         return;
     }
-    
-    // Gọi API để lấy thông tin sản phẩm
-    fetch('/api/cart-items/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({cart: cart})
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            console.error('Error:', data.error);
-            displayCartBasic(cart);
-            return;
+
+    try {
+        const res = await fetch('/api/cart-items/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({ cart }),
+        });
+        const data = await res.json();
+
+        /* Nếu API báo có sản phẩm vượt tồn kho → tự điều chỉnh localStorage */
+        if (data.stock_errors && data.stock_errors.length > 0) {
+            data.stock_errors.forEach(e => {
+                if (e.available === 0) {
+                    delete cart[e.product_id];
+                } else {
+                    cart[e.product_id] = e.available;
+                }
+            });
+            localStorage.setItem('cart', JSON.stringify(cart));
         }
-        
+
         let html = '';
         let total = 0;
-        
+
         data.items.forEach(item => {
+            /* Bỏ qua sản phẩm hết hàng (stock = 0) */
+            if (item.stock === 0) return;
+
+            const sub = item.price * item.quantity;
+            total += sub;
+
+            const canIncrease = item.quantity < item.stock;
+
             html += `
                 <div class="card mb-3">
                     <div class="card-body">
                         <div class="row align-items-center">
                             <div class="col-md-2">
-                                ${item.image ? 
-                                    `<img src="${item.image}" class="img-fluid rounded" alt="${item.name}" style="max-height: 100px; object-fit: cover;">` :
-                                    `<div class="bg-secondary text-white text-center p-3 rounded" style="height: 100px; display: flex; align-items: center; justify-content: center;"><small>No Image</small></div>`
-                                }
+                                ${item.image
+                                    ? `<img src="${item.image}" class="img-fluid rounded"
+                                            style="max-height:80px;object-fit:cover;">`
+                                    : `<div class="bg-secondary text-white text-center rounded p-2">
+                                           <small>No Image</small></div>`}
                             </div>
                             <div class="col-md-4">
-                                <h5 class="mb-1">${item.name}</h5>
+                                <h6 class="mb-1">${item.name}</h6>
                                 <p class="text-danger mb-0">${formatPrice(item.price)}đ</p>
+                                <small class="text-muted">Còn ${item.stock} sản phẩm</small>
                             </div>
                             <div class="col-md-3">
                                 <div class="input-group input-group-sm">
-                                    <button class="btn btn-outline-secondary" onclick="updateQuantity(${item.id}, -1)">-</button>
-                                    <input type="number" class="form-control text-center" value="${item.quantity}" min="1" readonly>
-                                    <button class="btn btn-outline-secondary" onclick="updateQuantity(${item.id}, 1)">+</button>
+                                    <button class="btn btn-outline-secondary"
+                                            onclick="changeQuantity('${item.id}', -1, ${item.stock})"
+                                            ${item.quantity <= 1 ? 'disabled' : ''}>−</button>
+                                    <input type="number" class="form-control text-center"
+                                           value="${item.quantity}" min="1" max="${item.stock}" readonly>
+                                    <button class="btn btn-outline-secondary"
+                                            onclick="changeQuantity('${item.id}', 1, ${item.stock})"
+                                            ${!canIncrease ? 'disabled title="Đã đạt tối đa tồn kho"' : ''}>+</button>
                                 </div>
+                                ${!canIncrease
+                                    ? `<small class="text-warning d-block mt-1">⚠️ Đã đạt số lượng tối đa</small>`
+                                    : ''}
                             </div>
                             <div class="col-md-2 text-end">
-                                <strong>${formatPrice(item.subtotal)}đ</strong>
+                                <strong>${formatPrice(sub)}đ</strong>
                             </div>
                             <div class="col-md-1 text-end">
-                                <button class="btn btn-outline-danger btn-sm" onclick="removeFromCart(${item.id})" title="Xóa">
-                                    🗑
-                                </button>
+                                <button class="btn btn-outline-danger btn-sm"
+                                        onclick="removeFromCart('${item.id}')">🗑</button>
                             </div>
                         </div>
                     </div>
-                </div>
-            `;
-            total += item.subtotal;
+                </div>`;
         });
-        
+
+        if (html === '') {
+            /* Toàn bộ sản phẩm hết hàng */
+            localStorage.removeItem('cart');
+            loadCart();
+            return;
+        }
+
         cartItemsDiv.innerHTML = html;
         document.getElementById('subtotal').textContent = formatPrice(total) + 'đ';
-        document.getElementById('total').textContent = formatPrice(total) + 'đ';
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        displayCartBasic(cart);
-    });
-}
+        document.getElementById('total').textContent    = formatPrice(total) + 'đ';
+        document.getElementById('checkoutBtn').classList.remove('disabled');
 
-function displayCartBasic(cart) {
-    // Fallback khi API không hoạt động
-    let html = `
-        <div class="alert alert-warning">
-            <h5>Giỏ hàng của bạn</h5>
-            <p>Bạn có ${Object.keys(cart).length} sản phẩm trong giỏ hàng.</p>
-            <ul>
-    `;
-    
-    for (let [productId, qty] of Object.entries(cart)) {
-        html += `<li>Sản phẩm #${productId}: ${qty} sản phẩm</li>`;
+    } catch (err) {
+        console.error(err);
+        cartItemsDiv.innerHTML = `<div class="alert alert-danger">
+            Không thể tải giỏ hàng. Vui lòng thử lại.</div>`;
     }
-    
-    html += `
-            </ul>
-            <p class="mb-0"><small>Không thể tải chi tiết sản phẩm. Vui lòng thử lại.</small></p>
-        </div>
-    `;
-    
-    document.getElementById('cartItems').innerHTML = html;
 }
 
-function updateQuantity(productId, change) {
-    let cart = JSON.parse(localStorage.getItem('cart') || '{}');
-    
-    if (cart[productId]) {
-        cart[productId] += change;
-        
-        if (cart[productId] <= 0) {
-            delete cart[productId];
-        }
-        
+/* ── Thay đổi số lượng — productId là string để khớp key localStorage ── */
+function changeQuantity(productId, delta, stock) {
+    const cart = JSON.parse(localStorage.getItem('cart') || '{}');
+
+    // Key localStorage luôn là string
+    const currentQty = parseInt(cart[productId] || 0);
+    const newQty = currentQty + delta;
+
+    if (newQty <= 0) {
+        removeFromCart(productId);
+        return;
+    }
+
+    // Kiểm tra tồn kho bằng stock đã truyền vào — không cần gọi API thêm
+    if (newQty > stock) {
+        showToast(`⚠️ Chỉ còn ${stock} sản phẩm trong kho!`, 'warning');
+        cart[productId] = stock;  // Giới hạn về mức tối đa
         localStorage.setItem('cart', JSON.stringify(cart));
         loadCart();
         updateCartCount();
+        return;
     }
+
+    cart[productId] = newQty;
+    localStorage.setItem('cart', JSON.stringify(cart));
+    loadCart();
+    updateCartCount();
 }
 
 function removeFromCart(productId) {
-    if (confirm('Bạn có chắc muốn xóa sản phẩm này?')) {
-        let cart = JSON.parse(localStorage.getItem('cart') || '{}');
-        delete cart[productId];
-        localStorage.setItem('cart', JSON.stringify(cart));
-        loadCart();
-        updateCartCount();
-    }
+    // productId là string
+    if (!confirm('Bạn có chắc muốn xóa sản phẩm này?')) return;
+    const cart = JSON.parse(localStorage.getItem('cart') || '{}');
+    delete cart[productId];
+    localStorage.setItem('cart', JSON.stringify(cart));
+    loadCart();
+    updateCartCount();
 }
 
-function formatPrice(price) {
-    return new Intl.NumberFormat('vi-VN').format(Math.round(price));
+/* ── Toast thông báo nhẹ ── */
+function showToast(msg, type = 'info') {
+    const id = 'toast-' + Date.now();
+    const div = document.createElement('div');
+    div.id = id;
+    div.className = `alert alert-${type} alert-dismissible position-fixed`;
+    div.style.cssText = 'top:70px;right:20px;z-index:9999;min-width:280px;';
+    div.innerHTML = `${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 3500);
 }
 
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
-// Load giỏ hàng khi trang load
 document.addEventListener('DOMContentLoaded', loadCart);
 </script>
 {% endblock %}

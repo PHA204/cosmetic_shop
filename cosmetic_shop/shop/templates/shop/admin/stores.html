@@ -1,25 +1,20 @@
 {% extends 'shop/admin/base.html' %}
-{% load static %}
 
 {% block page_title %}Quản lý cửa hàng{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between mb-3">
-    <div>
-        <p class="text-muted">Tổng: {{ stores.count }} cửa hàng</p>
-    </div>
-    <div>
-        <a href="/admin/shop/store/add/" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Thêm cửa hàng
-        </a>
-    </div>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <p class="text-muted mb-0">Tổng: {{ stores.count }} cửa hàng</p>
+    <a href="{% url 'shop:admin_store_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Thêm cửa hàng
+    </a>
 </div>
 
 <div class="card">
-    <div class="card-body">
+    <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
                     <tr>
                         <th>ID</th>
                         <th>Tên cửa hàng</th>
@@ -32,7 +27,7 @@
                 <tbody>
                     {% for store in stores %}
                     <tr>
-                        <td>{{ store.id }}</td>
+                        <td class="text-muted">{{ store.id }}</td>
                         <td><strong>{{ store.name }}</strong></td>
                         <td>{{ store.address }}</td>
                         <td>{{ store.phone }}</td>
@@ -42,19 +37,25 @@
                             </small>
                         </td>
                         <td>
-                            <a href="/admin/shop/store/{{ store.id }}/change/" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-pencil"></i> Sửa
-                            </a>
-                            <a href="{% url 'shop:store_locator' %}" class="btn btn-sm btn-outline-secondary" target="_blank">
-                                <i class="bi bi-map"></i> Xem bản đồ
-                            </a>
+                            <div class="d-flex gap-1">
+                                <a href="{% url 'shop:admin_store_edit' store.id %}"
+                                   class="btn btn-sm btn-outline-primary" title="Sửa">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'shop:store_locator' %}"
+                                   class="btn btn-sm btn-outline-secondary" target="_blank" title="Xem bản đồ">
+                                    <i class="bi bi-map"></i>
+                                </a>
+                                <a href="{% url 'shop:admin_store_delete' store.id %}"
+                                   class="btn btn-sm btn-outline-danger" title="Xóa">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center text-muted">
-                            Chưa có cửa hàng nào. <a href="/admin/shop/store/add/">Thêm cửa hàng</a>
-                        </td>
+                        <td colspan="6" class="text-center text-muted py-4">Chưa có cửa hàng nào.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -68,8 +69,8 @@
     <div class="card-header bg-white">
         <h5 class="mb-0"><i class="bi bi-map"></i> Bản đồ cửa hàng</h5>
     </div>
-    <div class="card-body">
-        <div id="storeMap" style="height: 400px;"></div>
+    <div class="card-body p-0">
+        <div id="storeMap" style="height: 380px;"></div>
     </div>
 </div>
 {% endif %}
@@ -83,20 +84,18 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 {% if stores %}
 <script>
-var map = L.map('storeMap').setView([10.7769, 106.7009], 11);
-
+const map = L.map('storeMap').setView([10.7769, 106.7009], 11);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
     attribution: '© OpenStreetMap © CARTO'
 }).addTo(map);
 
-var storeIcon = L.icon({
+const icon = L.icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41]
+    iconSize: [25, 41], iconAnchor: [12, 41]
 });
 
 {% for store in stores %}
-L.marker([{{ store.latitude }}, {{ store.longitude }}], {icon: storeIcon})
+L.marker([{{ store.latitude }}, {{ store.longitude }}], {icon})
     .addTo(map)
     .bindPopup('<b>{{ store.name }}</b><br>{{ store.address }}<br>{{ store.phone }}');
 {% endfor %}

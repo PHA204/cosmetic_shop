@@ -13,89 +13,155 @@
                 <form id="checkoutForm" method="post">
                     {% csrf_token %}
                     <input type="hidden" name="cart_data" id="cartData">
-                    
+
                     <div class="mb-3">
                         <label class="form-label">Họ và tên:</label>
-                        <input type="text" name="name" class="form-control" required 
+                        <input type="text" name="name" class="form-control" required
                                value="{% if user.is_authenticated %}{{ user.get_full_name|default:user.username }}{% endif %}">
                     </div>
-                    
                     <div class="mb-3">
                         <label class="form-label">Số điện thoại:</label>
                         <input type="tel" name="phone" class="form-control" required>
                     </div>
-                    
                     <div class="mb-3">
                         <label class="form-label">Địa chỉ giao hàng:</label>
                         <textarea name="address" class="form-control" rows="3" required></textarea>
                     </div>
-                    
                     <div class="mb-3">
                         <label class="form-label">Ghi chú (tùy chọn):</label>
                         <textarea name="note" class="form-control" rows="2"></textarea>
                     </div>
-                    
-                    <button type="submit" class="btn btn-success btn-lg w-100">
-                        Đặt hàng
+
+                    <button type="submit" class="btn btn-success btn-lg w-100" id="submitBtn">
+                         Đặt hàng
                     </button>
                 </form>
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-5">
         <div class="card">
             <div class="card-body">
                 <h5 class="card-title">Đơn hàng của bạn</h5>
                 <hr>
-                <div id="orderSummary">
-                    <!-- Sẽ load bằng JavaScript -->
+
+                <div id="summaryLoading" class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm text-primary"></div>
+                    <span class="ms-2">Đang tải...</span>
                 </div>
+
+                <div id="orderSummary" style="display:none;"></div>
+                <div id="stockWarning" class="alert alert-warning mt-2" style="display:none;"></div>
+
                 <hr>
                 <div class="d-flex justify-content-between">
                     <strong>Tổng cộng:</strong>
-                    <strong class="text-danger" id="finalTotal">0đ</strong>
+                    <strong class="text-danger fs-5" id="finalTotal">—</strong>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function loadOrderSummary() {
-    let cart = JSON.parse(localStorage.getItem('cart') || '{}');
-    
+function formatPrice(n) {
+    return new Intl.NumberFormat('vi-VN').format(Math.round(n)) + 'đ';
+}
+
+function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^|;)\\s*' + name + '=([^;]+)'));
+    return match ? decodeURIComponent(match[2]) : null;
+}
+
+async function loadOrderSummary() {
+    const cart = JSON.parse(localStorage.getItem('cart') || '{}');
+
+    if (Object.keys(cart).length === 0) {
+        alert('Giỏ hàng trống! Vui lòng thêm sản phẩm trước.');
+        window.location.href = '{% url "shop:cart" %}';
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/cart-items/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({ cart }),
+        });
+        const data = await res.json();
+
+        if (data.stock_errors && data.stock_errors.length > 0) {
+            let warnHtml = '<strong>Một số sản phẩm đã được điều chỉnh do vượt tồn kho:</strong><ul class="mb-0 mt-1">';
+            data.stock_errors.forEach(e => {
+                warnHtml += `<li>${e.product_name}: yêu cầu ${e.requested}, chỉ còn <strong>${e.available}</strong></li>`;
+                cart[e.product_id] = e.available;
+            });
+            warnHtml += '</ul>';
+            document.getElementById('stockWarning').innerHTML = warnHtml;
+            document.getElementById('stockWarning').style.display = 'block';
+            localStorage.setItem('cart', JSON.stringify(cart));
+        }
+
+        let html = '<ul class="list-unstyled mb-0">';
+        let total = 0;
+
+        data.items.forEach(item => {
+            const sub = item.price * item.quantity;
+            total += sub;
+            html += `
+                <li class="d-flex justify-content-between align-items-center mb-2">
+                    <span>
+                        ${item.image
+                            ? `<img src="${item.image}" style="width:36px;height:36px;object-fit:cover;border-radius:4px;" class="me-2">`
+                            : ''}
+                        ${item.name}
+                        <span class="text-muted ms-1">x${item.quantity}</span>
+                    </span>
+                    <strong>${formatPrice(sub)}</strong>
+                </li>`;
+        });
+        html += '</ul>';
+
+        document.getElementById('summaryLoading').style.display = 'none';
+        document.getElementById('orderSummary').innerHTML = html;
+        document.getElementById('orderSummary').style.display = 'block';
+        document.getElementById('finalTotal').textContent = formatPrice(total);
+
+    } catch (err) {
+        console.error(err);
+        document.getElementById('summaryLoading').innerHTML =
+            '<p class="text-danger">Không thể tải thông tin giỏ hàng.</p>';
+    }
+}
+
+document.getElementById('checkoutForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const cart = JSON.parse(localStorage.getItem('cart') || '{}');
+
     if (Object.keys(cart).length === 0) {
         alert('Giỏ hàng trống!');
         window.location.href = '{% url "shop:cart" %}';
         return;
     }
-    
-    // Lưu cart vào hidden input để submit
-    document.getElementById('cartData').value = JSON.stringify(cart);
-    
-    // Giả sử có API để lấy thông tin sản phẩm
-    // Tạm thời hiển thị số lượng
-    let summary = '<ul class="list-unstyled">';
-    for (let [productId, qty] of Object.entries(cart)) {
-        summary += `<li class="mb-2">Sản phẩm #${productId} x ${qty}</li>`;
-    }
-    summary += '</ul>';
-    
-    document.getElementById('orderSummary').innerHTML = summary;
-}
 
-document.getElementById('checkoutForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    // Submit form
-    this.submit();
-    
-    // Xóa giỏ hàng sau khi đặt hàng
+    document.getElementById('cartData').value = JSON.stringify(cart);
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
+
+    /* Xóa cart trước khi submit — nếu server lỗi sẽ redirect về cart với thông báo */
     localStorage.removeItem('cart');
+    updateCartCount();
+
+    this.submit();
 });
 
 document.addEventListener('DOMContentLoaded', loadOrderSummary);
