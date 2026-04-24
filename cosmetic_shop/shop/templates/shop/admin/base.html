@@ -45,18 +45,38 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {% if 'admin_categor' in request.resolver_match.url_name %}active{% endif %}"
+                        href="{% url 'shop:admin_categories' %}">
+                            <i class="bi bi-tags"></i> Danh mục
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {% if 'admin_order' in request.resolver_match.url_name %}active{% endif %}"
                            href="{% url 'shop:admin_orders' %}">
                             <i class="bi bi-cart-check"></i> Đơn hàng
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {% if 'admin_shipper' in request.resolver_match.url_name %}active{% endif %}"
+                        href="{% url 'shop:admin_shippers' %}">
+                            <i class="bi bi-person-badge"></i> Shipper
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
                         <a class="nav-link {% if 'admin_store' in request.resolver_match.url_name %}active{% endif %}"
                            href="{% url 'shop:admin_stores' %}">
                             <i class="bi bi-shop"></i> Cửa hàng
                         </a>
                     </li>
-                     
+                    
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'admin_revenue' in request.resolver_match.url_name %}active{% endif %}"
+                        href="{% url 'shop:admin_revenue' %}">
+                            <i class="bi bi-graph-up-arrow"></i> Doanh thu
+                        </a>
+                    </li>
+
                     <li class="nav-item mt-3 border-top border-secondary pt-2">
                         <a class="nav-link" href="{% url 'shop:home' %}">
                             <i class="bi bi-house"></i> Về trang chủ

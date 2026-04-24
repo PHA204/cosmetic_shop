@@ -1,0 +1,382 @@
+{% extends 'shop/admin/base.html' %}
+
+{% block title %}Báo cáo doanh thu{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --accent: #c8485a;
+    --gold:   #b8965a;
+    --dark:   #1a1410;
+  }
+  .kpi-card {
+    background: #fff; border-radius: 14px;
+    padding: 24px; border: 1px solid #eee;
+    border-left: 4px solid var(--c, #ccc);
+    box-shadow: 0 2px 12px rgba(0,0,0,.05);
+    transition: transform .2s;
+  }
+  .kpi-card:hover { transform: translateY(-3px); }
+  .kpi-card .kpi-val {
+    font-size: 2rem; font-weight: 800;
+    line-height: 1; color: var(--c, #333);
+  }
+  .kpi-card .kpi-lbl { font-size: .82rem; color: #888; margin-top: 6px; }
+  .kpi-card .kpi-change {
+    font-size: .78rem; margin-top: 4px;
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .kpi-card .kpi-icon { font-size: 2rem; }
+  .chart-card {
+    background: #fff; border-radius: 14px;
+    padding: 24px; border: 1px solid #eee;
+    box-shadow: 0 2px 12px rgba(0,0,0,.05);
+    margin-bottom: 24px;
+  }
+  .chart-card h6 { font-weight: 700; color: var(--dark); margin-bottom: 18px; }
+  .filter-bar {
+    background: #fff; border-radius: 12px;
+    padding: 16px 20px; margin-bottom: 24px;
+    border: 1px solid #eee; box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  }
+  .table-rank th { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: #888; border-bottom: 2px solid #f0f0f0; }
+  .table-rank td { vertical-align: middle; padding: 12px 10px; border-color: #f5f5f5; }
+  .rank-medal { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: .82rem; }
+  .rank-1 { background: #ffd700; color: #7a5c00; }
+  .rank-2 { background: #c0c0c0; color: #444; }
+  .rank-3 { background: #cd7f32; color: #fff; }
+  .rank-n { background: #f0f0f0; color: #666; }
+  .bar-mini {
+    height: 6px; background: #f0f0f0; border-radius: 3px; overflow: hidden;
+    margin-top: 4px;
+  }
+  .bar-mini-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent), #e06070); }
+  .status-pill {
+    display: inline-block; padding: 3px 12px; border-radius: 20px;
+    font-size: .75rem; font-weight: 600;
+  }
+  .section-divider { margin: 8px 0 20px; border: none; border-top: 1.5px solid #f0f0f0; }
+</style>
+{% endblock %}
+
+{% block page_title %}Báo cáo doanh thu{% endblock %}
+
+{% block content %}
+
+<!-- ── FILTER ── -->
+<div class="filter-bar d-flex align-items-center flex-wrap gap-3">
+  <form method="get" class="d-flex align-items-center gap-3 flex-wrap flex-grow-1">
+    <div class="d-flex align-items-center gap-2">
+      <label class="form-label mb-0 fw-semibold text-muted" style="font-size:.85rem;">Từ ngày</label>
+      <input type="date" name="from_date" class="form-control form-control-sm" style="width:150px;"
+             value="{{ from_date }}">
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <label class="form-label mb-0 fw-semibold text-muted" style="font-size:.85rem;">Đến ngày</label>
+      <input type="date" name="to_date" class="form-control form-control-sm" style="width:150px;"
+             value="{{ to_date }}">
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <label class="form-label mb-0 fw-semibold text-muted" style="font-size:.85rem;">Nhóm theo</label>
+      <select name="group_by" class="form-select form-select-sm" style="width:130px;">
+        <option value="day"   {% if group_by == 'day' %}selected{% endif %}>Ngày</option>
+        <option value="week"  {% if group_by == 'week' %}selected{% endif %}>Tuần</option>
+        <option value="month" {% if group_by == 'month' %}selected{% endif %}>Tháng</option>
+      </select>
+    </div>
+    <button class="btn btn-primary btn-sm">🔍 Lọc</button>
+    <a href="{% url 'shop:admin_revenue' %}" class="btn btn-outline-secondary btn-sm">↺ Đặt lại</a>
+  </form>
+  <div class="ms-auto">
+    <a href="{% url 'shop:admin_revenue' %}?export=csv&from_date={{ from_date }}&to_date={{ to_date }}"
+       class="btn btn-success btn-sm">
+       Xuất CSV
+    </a>
+  </div>
+</div>
+
+<!-- ── KPI CARDS ── -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="--c:#c8485a">
+      <div class="d-flex justify-content-between">
+        <div>
+          <div class="kpi-val">{{ total_revenue|floatformat:0 }}đ</div>
+          <div class="kpi-lbl">Tổng doanh thu</div>
+        </div>
+        <div class="kpi-icon"></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="--c:#0d6efd">
+      <div class="d-flex justify-content-between">
+        <div>
+          <div class="kpi-val">{{ total_orders }}</div>
+          <div class="kpi-lbl">Đơn hàng</div>
+        </div>
+        <div class="kpi-icon"></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="--c:#198754">
+      <div class="d-flex justify-content-between">
+        <div>
+          <div class="kpi-val">{{ delivered_orders }}</div>
+          <div class="kpi-lbl">Đã giao thành công</div>
+        </div>
+        <div class="kpi-icon"></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="--c:#b8965a">
+      <div class="d-flex justify-content-between">
+        <div>
+          <div class="kpi-val">{{ avg_order_value|floatformat:0 }}đ</div>
+          <div class="kpi-lbl">Giá trị TB / đơn</div>
+        </div>
+        <div class="kpi-icon"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CHARTS ROW ── -->
+<div class="row g-4 mb-4">
+  <!-- Revenue Line Chart -->
+  <div class="col-lg-8">
+    <div class="chart-card">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="mb-0"> Biểu đồ doanh thu theo {{ group_by_label }}</h6>
+        <small class="text-muted">{{ from_date }} → {{ to_date }}</small>
+      </div>
+      <canvas id="revenueChart" height="100"></canvas>
+    </div>
+  </div>
+  <!-- Order status donut -->
+  <div class="col-lg-4">
+    <div class="chart-card">
+      <h6> Trạng thái đơn hàng</h6>
+      <canvas id="statusChart" height="200"></canvas>
+      <div class="mt-3">
+        {% for item in status_breakdown %}
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span style="font-size:.83rem;">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:{{ item.color }};margin-right:6px;"></span>
+            {{ item.label }}
+          </span>
+          <span style="font-size:.83rem; font-weight:600;">{{ item.count }} ({{ item.pct|floatformat:0 }}%)</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOP PRODUCTS + RECENT ORDERS ── -->
+<div class="row g-4 mb-4">
+  <!-- Top sản phẩm -->
+  <div class="col-lg-6">
+    <div class="chart-card h-100">
+      <h6> Top sản phẩm bán chạy</h6>
+      <hr class="section-divider">
+      <table class="table table-rank mb-0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Sản phẩm</th>
+            <th class="text-end">SL bán</th>
+            <th class="text-end">Doanh thu</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in top_products %}
+          <tr>
+            <td>
+              <span class="rank-medal rank-{% if forloop.counter <= 3 %}{{ forloop.counter }}{% else %}n{% endif %}">
+                {{ forloop.counter }}
+              </span>
+            </td>
+            <td>
+              <div style="font-size:.9rem; font-weight:600;">{{ p.name|truncatechars:28 }}</div>
+              <div class="bar-mini" style="width:100px;">
+                <div class="bar-mini-fill" style="width:{{ p.pct|floatformat:0 }}%;"></div>
+              </div>
+            </td>
+            <td class="text-end" style="font-size:.88rem; font-weight:600;">{{ p.total_qty }}</td>
+            <td class="text-end" style="font-size:.88rem; color:var(--accent); font-weight:700;">
+              {{ p.revenue|floatformat:0 }}đ
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-center text-muted py-3">Không có dữ liệu</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Đơn hàng gần đây -->
+  <div class="col-lg-6">
+    <div class="chart-card h-100">
+      <h6> Đơn hàng gần đây</h6>
+      <hr class="section-divider">
+      <table class="table table-rank mb-0">
+        <thead>
+          <tr>
+            <th>#ID</th>
+            <th>Khách hàng</th>
+            <th>Trạng thái</th>
+            <th class="text-end">Tổng tiền</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for order in recent_orders %}
+          <tr>
+            <td>
+              <a href="{% url 'shop:admin_order_update' order.id %}" style="font-weight:700; color:var(--accent);">
+                #{{ order.id }}
+              </a>
+            </td>
+            <td style="font-size:.88rem;">{{ order.customer_name|truncatechars:20 }}</td>
+            <td>
+              <span class="status-pill
+                {% if order.status == 'pending' %}bg-warning text-dark
+                {% elif order.status == 'confirmed' %}bg-info text-white
+                {% elif order.status == 'shipping' %}bg-primary text-white
+                {% else %}bg-success text-white{% endif %}">
+                {{ order.get_status_display }}
+              </span>
+            </td>
+            <td class="text-end" style="font-weight:700; color:var(--accent); font-size:.88rem;">
+              {{ order.total|floatformat:0 }}đ
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-center text-muted py-3">Không có đơn hàng</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── DETAIL TABLE ── -->
+<div class="chart-card">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h6 class="mb-0"> Chi tiết doanh thu theo {{ group_by_label }}</h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-rank">
+      <thead>
+        <tr>
+          <th>Kỳ</th>
+          <th class="text-end">Số đơn</th>
+          <th class="text-end">Doanh thu</th>
+          <th class="text-end">TB / đơn</th>
+          <th>Tỷ lệ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in revenue_rows %}
+        <tr>
+          <td style="font-weight:600;">{{ row.period }}</td>
+          <td class="text-end">{{ row.order_count }}</td>
+          <td class="text-end" style="color:var(--accent); font-weight:700;">{{ row.revenue|floatformat:0 }}đ</td>
+          <td class="text-end" style="font-size:.85rem; color:#888;">{{ row.avg|floatformat:0 }}đ</td>
+          <td style="width:150px;">
+            <div class="bar-mini">
+              <div class="bar-mini-fill" style="width:{{ row.pct|floatformat:0 }}%;"></div>
+            </div>
+            <small style="font-size:.72rem; color:#888;">{{ row.pct|floatformat:1 }}%</small>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-4">Không có dữ liệu trong khoảng thời gian này.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ── Biểu đồ doanh thu ── */
+const revenueLabels  = {{ chart_labels|safe }};
+const revenueData    = {{ chart_revenue|safe }};
+const ordersData     = {{ chart_orders|safe }};
+
+const rCtx = document.getElementById('revenueChart').getContext('2d');
+new Chart(rCtx, {
+  type: 'bar',
+  data: {
+    labels: revenueLabels,
+    datasets: [
+      {
+        type: 'line',
+        label: 'Doanh thu (đ)',
+        data: revenueData,
+        borderColor: '#c8485a',
+        backgroundColor: 'rgba(200,72,90,.08)',
+        borderWidth: 2.5,
+        pointRadius: 4,
+        pointBackgroundColor: '#c8485a',
+        tension: .35,
+        yAxisID: 'y',
+        fill: true,
+      },
+      {
+        type: 'bar',
+        label: 'Số đơn',
+        data: ordersData,
+        backgroundColor: 'rgba(13,110,253,.15)',
+        borderColor: 'rgba(13,110,253,.5)',
+        borderWidth: 1.5,
+        borderRadius: 6,
+        yAxisID: 'y2',
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { position: 'top', labels: { font: { size: 12 } } } },
+    scales: {
+      y:  { type: 'linear', position: 'left',  grid: { color: '#f5f5f5' },
+            ticks: { callback: v => (v/1000000).toFixed(1) + 'M', font: { size: 11 } } },
+      y2: { type: 'linear', position: 'right', grid: { drawOnChartArea: false },
+            ticks: { font: { size: 11 } } },
+    }
+  }
+});
+
+/* ── Biểu đồ trạng thái ── */
+const statusLabels = {{ status_labels|safe }};
+const statusCounts = {{ status_counts|safe }};
+const statusColors = {{ status_colors|safe }};
+
+const sCtx = document.getElementById('statusChart').getContext('2d');
+new Chart(sCtx, {
+  type: 'doughnut',
+  data: {
+    labels: statusLabels,
+    datasets: [{
+      data: statusCounts,
+      backgroundColor: statusColors,
+      borderWidth: 2, borderColor: '#fff',
+      hoverBorderWidth: 3,
+    }]
+  },
+  options: {
+    responsive: true,
+    cutout: '65%',
+    plugins: { legend: { display: false } }
+  }
+});
+</script>
+{% endblock %}

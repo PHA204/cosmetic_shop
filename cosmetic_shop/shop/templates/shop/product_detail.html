@@ -1,207 +1,332 @@
 {% extends 'shop/base.html' %}
-
 {% block title %}{{ product.name }} - Cosmetic Shop{% endblock %}
+
+{% block extra_css %}
+<style>
+  .gallery-main {
+    position: relative; border-radius: 16px; overflow: hidden;
+    background: #f5f0ec; aspect-ratio: 1/1;
+    box-shadow: 0 4px 20px rgba(0,0,0,.1); cursor: zoom-in;
+  }
+  .gallery-main img {
+    width: 100%; height: 100%; object-fit: cover; transition: opacity .25s;
+  }
+  .gallery-main .no-img {
+    width: 100%; height: 100%; display: flex; align-items: center;
+    justify-content: center; font-size: 5rem; color: #ccc;
+  }
+  .zoom-hint {
+    position: absolute; bottom: 10px; right: 10px;
+    background: rgba(0,0,0,.45); color: #fff; border-radius: 20px;
+    padding: 3px 10px; font-size: .72rem; opacity: 0; transition: opacity .2s;
+    pointer-events: none;
+  }
+  .gallery-main:hover .zoom-hint { opacity: 1; }
+
+  .gallery-thumbs { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .thumb-item {
+    width: 76px; height: 76px; border-radius: 10px; overflow: hidden;
+    cursor: pointer; border: 2.5px solid transparent;
+    transition: border-color .2s, transform .15s; background: #f5f0ec;
+  }
+  .thumb-item:hover  { transform: translateY(-2px); border-color: #e08090; }
+  .thumb-item.active { border-color: #c8485a; }
+  .thumb-item img    { width: 100%; height: 100%; object-fit: cover; }
+
+  /* Lightbox */
+  .lightbox {
+    display: none; position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,.9); align-items: center;
+    justify-content: center; cursor: zoom-out;
+  }
+  .lightbox.open { display: flex; animation: lbFadeIn .2s; }
+  @keyframes lbFadeIn { from{opacity:0} to{opacity:1} }
+  .lightbox img {
+    max-width: 88vw; max-height: 88vh; border-radius: 12px;
+    box-shadow: 0 8px 60px rgba(0,0,0,.6); cursor: default;
+  }
+  .lb-close {
+    position: absolute; top: 18px; right: 22px; color: #fff;
+    font-size: 2.2rem; cursor: pointer; background: none; border: none;
+    line-height: 1; opacity: .8; transition: opacity .2s;
+  }
+  .lb-close:hover { opacity: 1; }
+  .lb-btn {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    background: rgba(255,255,255,.15); border: none; color: #fff;
+    font-size: 2rem; padding: 10px 18px; border-radius: 10px;
+    cursor: pointer; transition: background .2s;
+  }
+  .lb-btn:hover { background: rgba(255,255,255,.3); }
+  .lb-prev { left: 16px; }
+  .lb-next { right: 16px; }
+  .lb-counter {
+    position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,.65); font-size: .82rem; letter-spacing: .05em;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
 <nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{% url 'shop:home' %}">Trang chủ</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'shop:product_list' %}">Sản phẩm</a></li>
-        <li class="breadcrumb-item active">{{ product.name }}</li>
-    </ol>
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'shop:home' %}">Trang chủ</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'shop:product_list' %}">Sản phẩm</a></li>
+    <li class="breadcrumb-item active">{{ product.name }}</li>
+  </ol>
 </nav>
 
 <div class="row">
-    <!-- Ảnh sản phẩm -->
-    <div class="col-md-6">
-        {% if product.image %}
-        <img src="{{ product.image.url }}" class="img-fluid rounded shadow-sm" alt="{{ product.name }}"
-             style="width:100%; max-height:480px; object-fit:cover;">
-        {% else %}
-        <div class="bg-light d-flex align-items-center justify-content-center rounded"
-             style="height:400px;">
-            <span class="text-muted fs-5">Không có ảnh</span>
-        </div>
-        {% endif %}
+  <!-- ── Cột ảnh ── -->
+  <div class="col-md-6">
+    <div class="gallery-main" id="mainWrap" onclick="openLightbox(currentIdx)">
+      {% if product.image %}
+      <img src="{{ product.image.url }}" alt="{{ product.name }}" id="mainImg">
+      {% else %}
+      <div class="no-img">🧴</div>
+      {% endif %}
+      <span class="zoom-hint">🔍 Phóng to</span>
     </div>
 
-    <!-- Thông tin sản phẩm -->
-    <div class="col-md-6">
-        <h2 class="fw-bold mb-2">{{ product.name }}</h2>
-
-        <h3 class="text-danger mb-3">{{ product.price|floatformat:0 }}đ</h3>
-
-        <!-- Trạng thái tồn kho -->
-        <div class="mb-3">
-            {% if product.stock > 10 %}
-                <span class="badge bg-success fs-6">Còn hàng ({{ product.stock }} sản phẩm)</span>
-            {% elif product.stock > 0 %}
-                <span class="badge bg-warning text-dark fs-6">Sắp hết (còn {{ product.stock }} sản phẩm)</span>
-            {% else %}
-                <span class="badge bg-danger fs-6">Hết hàng</span>
-            {% endif %}
-        </div>
-
-        <hr>
-
-        <!-- Mô tả -->
-        <div class="mb-4">
-            <h5>Mô tả sản phẩm</h5>
-            <p class="text-muted">{{ product.description|linebreaks }}</p>
-        </div>
-
-        {% if product.stock > 0 %}
-        <!-- Chọn số lượng -->
-        <div class="mb-3 d-flex align-items-center gap-3">
-            <label class="form-label mb-0 fw-semibold">Số lượng:</label>
-            <div class="input-group" style="width: 140px;">
-                <button class="btn btn-outline-secondary" type="button"
-                        onclick="changeQty(-1)" id="qtyMinus" disabled>−</button>
-                <input type="text" class="form-control text-center fw-bold"
-                       id="qtyDisplay" value="1" readonly>
-                <button class="btn btn-outline-secondary" type="button"
-                        onclick="changeQty(1)" id="qtyPlus"
-                        {% if product.stock <= 1 %}disabled{% endif %}>+</button>
-            </div>
-            <small class="text-muted">Tối đa {{ product.stock }}</small>
-        </div>
-
-        <!-- Nút thêm giỏ -->
-        <div class="d-grid gap-2 mb-3">
-            <button class="btn btn-success btn-lg"
-                    onclick="addToCart({{ product.id }}, {{ product.stock }})">
-                🛒 Thêm vào giỏ hàng
-            </button>
-            <a href="{% url 'shop:product_list' %}" class="btn btn-outline-secondary">
-                ← Tiếp tục mua sắm
-            </a>
-        </div>
-        {% else %}
-        <div class="d-grid gap-2 mb-3">
-            <button class="btn btn-secondary btn-lg" disabled>Hết hàng</button>
-            <a href="{% url 'shop:product_list' %}" class="btn btn-outline-secondary">
-                ← Tiếp tục mua sắm
-            </a>
-        </div>
-        {% endif %}
-
-        <!-- Thông tin thêm -->
-        <div class="row text-center border-top pt-3 mt-2">
-            <div class="col-4">
-                <div class="text-success fs-5">✓</div>
-                <small class="text-muted">Chính hãng 100%</small>
-            </div>
-            <div class="col-4">
-                <div class="text-primary fs-5">↩</div>
-                <small class="text-muted">Đổi trả 30 ngày</small>
-            </div>
-            <div class="col-4">
-                <div class="text-warning fs-5">🚚</div>
-                <small class="text-muted">Miễn phí vận chuyển</small>
-            </div>
-        </div>
+    <!-- Thumbs — chỉ hiện khi có > 1 ảnh -->
+    {% if product.image and gallery %}
+    <div class="gallery-thumbs">
+      <div class="thumb-item active" id="th-0"
+           onclick="switchImg(0,'{{ product.image.url }}')">
+        <img src="{{ product.image.url }}" alt="{{ product.name }}">
+      </div>
+      {% for gi in gallery %}
+      <div class="thumb-item" id="th-{{ forloop.counter }}"
+           onclick="switchImg({{ forloop.counter }},'{{ gi.image.url }}')">
+        <img src="{{ gi.image.url }}" alt="{{ gi.alt|default:product.name }}">
+      </div>
+      {% endfor %}
     </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Cột info ── -->
+  <div class="col-md-6">
+    {% if product.category %}
+    <span class="badge mb-2"
+          style="background:#f0e8f0;color:#8a4a8a;font-size:.8rem;">
+      {{ product.category.icon }} {{ product.category.name }}
+    </span>
+    {% endif %}
+
+    <h2 class="fw-bold mb-2">{{ product.name }}</h2>
+    <h3 class="text-danger mb-3">{{ product.price|floatformat:0 }}đ</h3>
+
+    <div class="mb-3">
+      {% if product.stock > 10 %}
+        <span class="badge bg-success fs-6">Còn hàng ({{ product.stock }} sản phẩm)</span>
+      {% elif product.stock > 0 %}
+        <span class="badge bg-warning text-dark fs-6">Sắp hết (còn {{ product.stock }})</span>
+      {% else %}
+        <span class="badge bg-danger fs-6">Hết hàng</span>
+      {% endif %}
+    </div>
+
+    <hr>
+    <div class="mb-4">
+      <h5>Mô tả sản phẩm</h5>
+      <p class="text-muted">{{ product.description|linebreaks }}</p>
+    </div>
+
+    {% if product.stock > 0 %}
+    <div class="mb-3 d-flex align-items-center gap-3">
+      <label class="form-label mb-0 fw-semibold">Số lượng:</label>
+      <div class="input-group" style="width:140px;">
+        <button class="btn btn-outline-secondary" type="button"
+                onclick="changeQty(-1)" id="qtyMinus" disabled>−</button>
+        <input type="text" class="form-control text-center fw-bold"
+               id="qtyDisplay" value="1" readonly>
+        <button class="btn btn-outline-secondary" type="button"
+                onclick="changeQty(1)" id="qtyPlus"
+                {% if product.stock <= 1 %}disabled{% endif %}>+</button>
+      </div>
+      <small class="text-muted">Tối đa {{ product.stock }}</small>
+    </div>
+
+    <div class="d-grid gap-2 mb-3">
+      <button class="btn btn-success btn-lg"
+              onclick="addToCart({{ product.id }},{{ product.stock }})">
+        🛒 Thêm vào giỏ hàng
+      </button>
+      <a href="{% url 'shop:product_list' %}" class="btn btn-outline-secondary">
+        ← Tiếp tục mua sắm
+      </a>
+    </div>
+    {% else %}
+    <div class="d-grid gap-2 mb-3">
+      <button class="btn btn-secondary btn-lg" disabled>Hết hàng</button>
+      <a href="{% url 'shop:product_list' %}" class="btn btn-outline-secondary">
+        ← Tiếp tục mua sắm
+      </a>
+    </div>
+    {% endif %}
+
+    <div class="row text-center border-top pt-3 mt-2">
+      <div class="col-4">
+        <div class="text-success fs-5">✓</div>
+        <small class="text-muted">Chính hãng 100%</small>
+      </div>
+      <div class="col-4">
+        <div class="text-primary fs-5">↩</div>
+        <small class="text-muted">Đổi trả 30 ngày</small>
+      </div>
+      <div class="col-4">
+        <div class="text-warning fs-5">🚚</div>
+        <small class="text-muted">Miễn phí vận chuyển</small>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Sản phẩm liên quan -->
 {% if related_products %}
 <div class="mt-5">
-    <h4 class="mb-4 border-bottom pb-2">Sản phẩm liên quan</h4>
-    <div class="row">
-        {% for rp in related_products %}
-        <div class="col-md-3 mb-4">
-            <div class="card h-100">
-                {% if rp.image %}
-                <img src="{{ rp.image.url }}" class="card-img-top"
-                     alt="{{ rp.name }}" style="height:200px; object-fit:cover;">
-                {% else %}
-                <div class="card-img-top bg-light d-flex align-items-center justify-content-center"
-                     style="height:200px;">
-                    <span class="text-muted">Không có ảnh</span>
-                </div>
-                {% endif %}
-                <div class="card-body d-flex flex-column">
-                    <h6 class="card-title">{{ rp.name }}</h6>
-                    <p class="text-danger fw-bold mb-2">{{ rp.price|floatformat:0 }}đ</p>
-                    <a href="{% url 'shop:product_detail' rp.pk %}"
-                       class="btn btn-primary btn-sm mt-auto">Xem chi tiết</a>
-                </div>
-            </div>
+  <h4 class="mb-4 border-bottom pb-2">Sản phẩm liên quan</h4>
+  <div class="row">
+    {% for rp in related_products %}
+    <div class="col-md-3 mb-4">
+      <div class="card h-100">
+        {% if rp.image %}
+        <img src="{{ rp.image.url }}" class="card-img-top"
+             alt="{{ rp.name }}" style="height:200px;object-fit:cover;">
+        {% else %}
+        <div class="card-img-top bg-light d-flex align-items-center justify-content-center"
+             style="height:200px;"><span class="text-muted">Không có ảnh</span></div>
+        {% endif %}
+        <div class="card-body d-flex flex-column">
+          <h6 class="card-title">{{ rp.name }}</h6>
+          <p class="text-danger fw-bold mb-2">{{ rp.price|floatformat:0 }}đ</p>
+          <a href="{% url 'shop:product_detail' rp.pk %}"
+             class="btn btn-primary btn-sm mt-auto">Xem chi tiết</a>
         </div>
-        {% endfor %}
+      </div>
     </div>
+    {% endfor %}
+  </div>
 </div>
 {% endif %}
 
-<!-- Toast thông báo -->
-<div id="pdToast" class="toast align-items-center text-white border-0 position-fixed bottom-0 end-0 m-4"
-     role="alert" style="z-index:9999; min-width:260px;">
-    <div class="d-flex">
-        <div class="toast-body fw-semibold" id="toastMsg">Đã thêm vào giỏ hàng!</div>
-        <button type="button" class="btn-close btn-close-white me-2 m-auto"
-                data-bs-dismiss="toast"></button>
-    </div>
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="if(event.target===this)closeLightbox()">
+  <button class="lb-close" onclick="closeLightbox()">×</button>
+  <button class="lb-btn lb-prev" onclick="lbNav(-1)">‹</button>
+  <img src="" id="lbImg" alt="">
+  <button class="lb-btn lb-next" onclick="lbNav(1)">›</button>
+  <div class="lb-counter" id="lbCounter"></div>
 </div>
 
+<!-- Toast -->
+<div id="pdToast"
+     class="toast align-items-center text-white border-0 position-fixed bottom-0 end-0 m-4"
+     role="alert" style="z-index:9999;min-width:260px;">
+  <div class="d-flex">
+    <div class="toast-body fw-semibold" id="toastMsg"></div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto"
+            data-bs-dismiss="toast"></button>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+// ── Danh sách ảnh ──
+const IMAGES = [
+  {% if product.image %}
+  { url: '{{ product.image.url|escapejs }}', alt: '{{ product.name|escapejs }}' },
+  {% endif %}
+  {% for gi in gallery %}
+  { url: '{{ gi.image.url|escapejs }}', alt: '{{ gi.alt|default:product.name|escapejs }}' },
+  {% endfor %}
+];
+
+let currentIdx = 0;
+
+function switchImg(idx, url) {
+  currentIdx = idx;
+  const el = document.getElementById('mainImg');
+  if (!el) return;
+  el.style.opacity = '0';
+  setTimeout(() => { el.src = url; el.style.opacity = '1'; }, 150);
+  document.querySelectorAll('.thumb-item').forEach((t, i) =>
+    t.classList.toggle('active', i === idx)
+  );
+}
+
+// ── Lightbox ──
+function openLightbox(idx) {
+  if (!IMAGES.length) return;
+  currentIdx = idx;
+  refreshLb();
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function refreshLb() {
+  const im = IMAGES[currentIdx];
+  document.getElementById('lbImg').src = im.url;
+  document.getElementById('lbImg').alt = im.alt;
+  document.getElementById('lbCounter').textContent =
+    IMAGES.length > 1 ? `${currentIdx + 1} / ${IMAGES.length}` : '';
+}
+function lbNav(d) {
+  currentIdx = (currentIdx + d + IMAGES.length) % IMAGES.length;
+  refreshLb();
+  switchImg(currentIdx, IMAGES[currentIdx].url);
+}
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('lightbox').classList.contains('open')) return;
+  if (e.key === 'ArrowRight') lbNav(1);
+  if (e.key === 'ArrowLeft')  lbNav(-1);
+  if (e.key === 'Escape')     closeLightbox();
+});
+
+// ── Số lượng ──
 let qty = 1;
 const maxStock = {{ product.stock|default:0 }};
-
-function changeQty(delta) {
-    qty = Math.min(Math.max(1, qty + delta), maxStock);
-    document.getElementById('qtyDisplay').value = qty;
-    document.getElementById('qtyMinus').disabled = qty <= 1;
-    document.getElementById('qtyPlus').disabled  = qty >= maxStock;
+function changeQty(d) {
+  qty = Math.min(Math.max(1, qty + d), maxStock);
+  document.getElementById('qtyDisplay').value = qty;
+  document.getElementById('qtyMinus').disabled = qty <= 1;
+  document.getElementById('qtyPlus').disabled  = qty >= maxStock;
 }
 
-function addToCart(productId, stock) {
-    const key  = String(productId);
-    const cart = JSON.parse(localStorage.getItem('cart') || '{}');
-    const cur  = parseInt(cart[key] || 0);
-    const next = cur + qty;
-
-    const toastEl = document.getElementById('pdToast');
-    const toast   = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 3000 });
-
-    if (next > stock) {
-        const canAdd = stock - cur;
-        if (canAdd <= 0) {
-            showToast('Bạn đã thêm đủ số lượng trong kho!', 'bg-warning text-dark');
-        } else {
-            cart[key] = stock;
-            localStorage.setItem('cart', JSON.stringify(cart));
-            updateCartCount();
-            showToast(`Đã thêm tối đa ${canAdd} sản phẩm còn lại`, 'bg-warning text-dark');
-        }
-        return;
-    }
-
-    cart[key] = next;
-    localStorage.setItem('cart', JSON.stringify(cart));
-    updateCartCount();
-    showToast(`🛒 Đã thêm ${qty} sản phẩm vào giỏ hàng`, 'bg-success');
+// ── Giỏ hàng ──
+function addToCart(id, stock) {
+  const key  = String(id);
+  const cart = JSON.parse(localStorage.getItem('cart') || '{}');
+  const cur  = parseInt(cart[key] || 0);
+  const next = cur + qty;
+  if (next > stock) {
+    const can = stock - cur;
+    if (can <= 0) showToast('Bạn đã thêm đủ số lượng!', 'bg-warning text-dark');
+    else { cart[key] = stock; save(cart); showToast(`Thêm tối đa ${can} sản phẩm`, 'bg-warning text-dark'); }
+    return;
+  }
+  cart[key] = next; save(cart);
+  showToast(`🛒 Đã thêm ${qty} sản phẩm`, 'bg-success');
 }
-
+function save(cart) {
+  localStorage.setItem('cart', JSON.stringify(cart)); updateCartCount();
+}
 function showToast(msg, cls = 'bg-success') {
-    const el = document.getElementById('pdToast');
-    // Xóa class màu cũ
-    el.classList.remove('bg-success', 'bg-warning', 'bg-danger', 'text-dark');
-    cls.split(' ').forEach(c => el.classList.add(c));
-    document.getElementById('toastMsg').textContent = msg;
-    bootstrap.Toast.getOrCreateInstance(el, { delay: 3000 }).show();
+  const el = document.getElementById('pdToast');
+  el.classList.remove('bg-success','bg-warning','bg-danger','text-dark');
+  cls.split(' ').forEach(c => el.classList.add(c));
+  document.getElementById('toastMsg').textContent = msg;
+  bootstrap.Toast.getOrCreateInstance(el, { delay: 3000 }).show();
 }
-
 function updateCartCount() {
-    const cart = JSON.parse(localStorage.getItem('cart') || '{}');
-    const n = Object.values(cart).reduce((s, q) => s + q, 0);
-    const badge = document.getElementById('cartBadge');
-    if (badge) {
-        badge.textContent = n;
-        badge.style.display = n > 0 ? 'inline' : 'none';
-    }
+  const n = Object.values(JSON.parse(localStorage.getItem('cart')||'{}')).reduce((s,q)=>s+q,0);
+  const b = document.getElementById('cartBadge');
+  if (b) { b.textContent = n; b.style.display = n > 0 ? 'inline' : 'none'; }
 }
 </script>
 {% endblock %}

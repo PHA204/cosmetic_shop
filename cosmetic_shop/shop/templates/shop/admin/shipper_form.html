@@ -1,0 +1,89 @@
+<!-- ══════════════════════════════════════════════════════════════
+     FILE 1: shop/templates/shop/admin/shipper_form.html
+     ══════════════════════════════════════════════════════════════ -->
+{% extends 'shop/admin/base.html' %}
+{% block page_title %}{{ action }} Shipper{% endblock %}
+ 
+{% block content %}
+<div class="mb-3">
+  <a href="{% url 'shop:admin_shippers' %}" class="btn btn-outline-secondary btn-sm">← Quay lại</a>
+</div>
+ 
+<div class="card" style="max-width:680px; border-radius:16px; border:none; box-shadow:0 4px 20px rgba(0,0,0,.08);">
+  <div class="card-body p-4">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+ 
+      <div class="row g-3">
+        <!-- Họ tên -->
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Họ tên <span class="text-danger">*</span></label>
+          <input type="text" name="name" class="form-control" required
+                 value="{{ shipper.name|default:'' }}" placeholder="Nguyễn Văn A">
+        </div>
+        <!-- SĐT -->
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Số điện thoại <span class="text-danger">*</span></label>
+          <input type="text" name="phone" class="form-control" required
+                 value="{{ shipper.phone|default:'' }}" placeholder="0901234567">
+        </div>
+        <!-- Email -->
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Email</label>
+          <input type="email" name="email" class="form-control"
+                 value="{{ shipper.email|default:'' }}" placeholder="shipper@email.com">
+        </div>
+        <!-- Phương tiện -->
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Phương tiện</label>
+          <input type="text" name="vehicle" class="form-control"
+                 value="{{ shipper.vehicle|default:'' }}" placeholder="Xe máy Honda Wave...">
+        </div>
+        <!-- Khu vực -->
+        <div class="col-12">
+          <label class="form-label fw-semibold">Khu vực phụ trách</label>
+          <input type="text" name="area" class="form-control"
+                 value="{{ shipper.area|default:'' }}" placeholder="Quận 1, Quận 3, Bình Thạnh...">
+        </div>
+        <!-- Trạng thái -->
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Trạng thái</label>
+          <select name="status" class="form-select">
+            {% for val, label in status_choices %}
+            <option value="{{ val }}"
+              {% if shipper.status == val %}selected{% elif not shipper and val == 'active' %}selected{% endif %}>
+              {{ label }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <!-- Avatar -->
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Ảnh đại diện</label>
+          {% if shipper.avatar %}
+          <div class="mb-2">
+            <img src="{{ shipper.avatar.url }}"
+                 style="width:56px;height:56px;border-radius:50%;object-fit:cover;">
+            <small class="text-muted ms-2">Chọn ảnh mới để thay thế</small>
+          </div>
+          {% endif %}
+          <input type="file" name="avatar" class="form-control" accept="image/*">
+        </div>
+        <!-- Ghi chú -->
+        <div class="col-12">
+          <label class="form-label fw-semibold">Ghi chú</label>
+          <textarea name="note" class="form-control" rows="3"
+                    placeholder="Ghi chú thêm về shipper...">{{ shipper.note|default:'' }}</textarea>
+        </div>
+      </div>
+ 
+      <div class="d-flex gap-2 mt-4">
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi bi-check-circle"></i> {{ action }} shipper
+        </button>
+        <a href="{% url 'shop:admin_shippers' %}" class="btn btn-outline-secondary">Hủy</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

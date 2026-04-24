@@ -1,61 +1,188 @@
 {% extends 'shop/admin/base.html' %}
-
 {% block page_title %}{{ action }} sản phẩm{% endblock %}
+
+{% block extra_css %}
+<style>
+  .gallery-grid {
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 8px;
+  }
+  .g-slot {
+    aspect-ratio: 1/1; border-radius: 12px;
+    border: 2px dashed #e0d0d0; background: #faf8f8;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+    cursor: pointer; transition: border-color .2s, opacity .2s;
+  }
+  .g-slot:hover { border-color: #c8485a; }
+  .g-slot img { width:100%; height:100%; object-fit:cover; pointer-events:none; }
+  .g-slot .g-ph { font-size:1.8rem; color:#ddd; }
+  .g-slot .g-lbl { font-size:.72rem; color:#bbb; margin-top:5px; }
+  .g-slot .g-del {
+    position:absolute; top:6px; right:6px;
+    background:rgba(200,72,90,.85); color:#fff; border:none;
+    border-radius:50%; width:26px; height:26px; font-size:1rem;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .g-slot .g-del:hover { background:#a33; }
+  .g-slot.marked { opacity:.35; }
+  .g-slot.marked .g-del { background:#888; }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="mb-3">
-    <a href="{% url 'shop:admin_products' %}" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Quay lại
-    </a>
+  <a href="{% url 'shop:admin_products' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Quay lại
+  </a>
 </div>
 
-<div class="card" style="max-width: 700px;">
-    <div class="card-body">
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
+<div class="card" style="max-width:720px;border-radius:16px;border:none;box-shadow:0 4px 20px rgba(0,0,0,.08);">
+  <div class="card-body p-4">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
 
-            <div class="mb-3">
-                <label class="form-label fw-bold">Tên sản phẩm <span class="text-danger">*</span></label>
-                <input type="text" name="name" class="form-control" required
-                       value="{{ product.name|default:'' }}">
-            </div>
+      <div class="mb-3">
+        <label class="form-label fw-bold">Tên sản phẩm <span class="text-danger">*</span></label>
+        <input type="text" name="name" class="form-control" required
+               value="{{ product.name|default:'' }}">
+      </div>
 
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label fw-bold">Giá (VND) <span class="text-danger">*</span></label>
-                    <input type="number" name="price" class="form-control" required min="0"
-                           value="{{ product.price|default:'' }}">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label fw-bold">Tồn kho <span class="text-danger">*</span></label>
-                    <input type="number" name="stock" class="form-control" required min="0"
-                           value="{{ product.stock|default:0 }}">
-                </div>
-            </div>
+      <div class="mb-3">
+        <label class="form-label fw-bold">Danh mục</label>
+        <select name="category" class="form-select">
+          <option value="">-- Chọn danh mục --</option>
+          {% for cat in categories %}
+          <option value="{{ cat.id }}"
+            {% if product.category_id == cat.id %}selected{% endif %}>
+            {{ cat.icon }} {{ cat.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
 
-            <div class="mb-3">
-                <label class="form-label fw-bold">Mô tả</label>
-                <textarea name="description" class="form-control" rows="4">{{ product.description|default:'' }}</textarea>
-            </div>
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label fw-bold">Giá (VND) <span class="text-danger">*</span></label>
+          <input type="number" name="price" class="form-control" required min="0"
+                 value="{{ product.price|default:'' }}">
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label fw-bold">Tồn kho <span class="text-danger">*</span></label>
+          <input type="number" name="stock" class="form-control" required min="0"
+                 value="{{ product.stock|default:0 }}">
+        </div>
+      </div>
 
-            <div class="mb-3">
-                <label class="form-label fw-bold">Hình ảnh</label>
-                {% if product.image %}
-                <div class="mb-2">
-                    <img src="{{ product.image.url }}" style="height:100px;object-fit:cover;border-radius:6px;">
-                    <small class="text-muted d-block mt-1">Chọn ảnh mới để thay thế</small>
-                </div>
-                {% endif %}
-                <input type="file" name="image" class="form-control" accept="image/*">
-            </div>
+      <div class="mb-3">
+        <label class="form-label fw-bold">Mô tả</label>
+        <textarea name="description" class="form-control" rows="5">{{ product.description|default:'' }}</textarea>
+      </div>
 
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-check-circle"></i> {{ action }} sản phẩm
-                </button>
-                <a href="{% url 'shop:admin_products' %}" class="btn btn-outline-secondary">Hủy</a>
-            </div>
-        </form>
-    </div>
+      <!-- Ảnh chính -->
+      <div class="mb-3">
+        <label class="form-label fw-bold">Ảnh chính</label>
+        {% if product.image %}
+        <div class="mb-2 d-flex align-items-center gap-3">
+          <img src="{{ product.image.url }}"
+               style="width:80px;height:80px;object-fit:cover;border-radius:10px;border:1.5px solid #eee;">
+          <small class="text-muted">Chọn ảnh mới để thay thế</small>
+        </div>
+        {% endif %}
+        <input type="file" name="image" class="form-control" accept="image/*">
+      </div>
+
+      <!-- Gallery -->
+      <div class="mb-4">
+        <label class="form-label fw-bold">
+          Ảnh phụ
+          <small class="text-muted fw-normal ms-1">(tối đa 3 — hiển thị thumbnail trong trang chi tiết)</small>
+        </label>
+
+        <div class="gallery-grid" id="galleryGrid">
+          {% for gi in gallery %}
+          <div class="g-slot" id="gs-{{ gi.id }}">
+            <img src="{{ gi.image.url }}" alt="">
+            <input type="checkbox" name="delete_image" value="{{ gi.id }}"
+                   id="dchk-{{ gi.id }}" style="display:none;">
+            <button type="button" class="g-del" title="Đánh dấu xoá"
+                    onclick="event.stopPropagation(); toggleDelete({{ gi.id }})">×</button>
+          </div>
+          {% endfor %}
+
+          {% for n in "123" %}
+          {% if forloop.counter > gallery|length %}
+          <div class="g-slot" id="gs-new-{{ forloop.counter }}"
+               onclick="triggerPick({{ forloop.counter }})">
+            <span class="g-ph">📷</span>
+            <span class="g-lbl">Ảnh {{ forloop.counter }}</span>
+            <input type="file" name="gallery_images" id="fp-{{ forloop.counter }}"
+                   accept="image/*" style="display:none;"
+                   onchange="preview(this, {{ forloop.counter }})">
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+
+        <small class="text-muted d-block mt-2">
+          Nhấp ô trống → chọn ảnh. Nhấn × → đánh dấu xoá (mờ đi). Submit để lưu thay đổi.
+        </small>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi bi-check-circle"></i> {{ action }} sản phẩm
+        </button>
+        <a href="{% url 'shop:admin_products' %}" class="btn btn-outline-secondary">Hủy</a>
+      </div>
+    </form>
+  </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleDelete(id) {
+  const cb   = document.getElementById('dchk-' + id);
+  const slot = document.getElementById('gs-' + id);
+  cb.checked = !cb.checked;
+  slot.classList.toggle('marked', cb.checked);
+}
+
+function triggerPick(n) {
+  document.getElementById('fp-' + n).click();
+}
+
+function preview(input, n) {
+  if (!input.files || !input.files[0]) return;
+  const slot = document.getElementById('gs-new-' + n);
+  const r = new FileReader();
+  r.onload = e => {
+    slot.innerHTML = `<img src="${e.target.result}">
+      <button type="button" class="g-del"
+              onclick="event.stopPropagation(); clearSlot(${n})">×</button>`;
+    // restore hidden file input
+    const fi = document.createElement('input');
+    fi.type = 'file'; fi.name = 'gallery_images';
+    fi.id = 'fp-' + n; fi.accept = 'image/*'; fi.style.display = 'none';
+    fi.onchange = function(){ preview(this, n); };
+    // Transfer file to new input via DataTransfer
+    const dt = new DataTransfer();
+    dt.items.add(input.files[0]);
+    fi.files = dt.files;
+    slot.appendChild(fi);
+  };
+  r.readAsDataURL(input.files[0]);
+}
+
+function clearSlot(n) {
+  const slot = document.getElementById('gs-new-' + n);
+  slot.innerHTML = `
+    <span class="g-ph">📷</span>
+    <span class="g-lbl">Ảnh ${n}</span>
+    <input type="file" name="gallery_images" id="fp-${n}"
+           accept="image/*" style="display:none;"
+           onchange="preview(this, ${n})">`;
+}
+</script>
 {% endblock %}

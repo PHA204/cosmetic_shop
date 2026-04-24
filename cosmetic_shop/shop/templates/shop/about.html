@@ -1,0 +1,499 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}Giới thiệu - Cosmetic Shop{% endblock %}
+
+{% block extra_css %}
+<!-- <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"> -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root {
+    --rose:    #c8485a;
+    --gold:    #b8965a;
+    --dark:    #1a1410;
+    --cream:   #faf6f0;
+    --muted:   #7a6e65;
+    --border:  #e8ddd4;
+  }
+
+  /* ── Hero ── */
+  .about-hero {
+    background: linear-gradient(135deg, #1a1410 0%, #2d1f15 50%, #3d2b1a 100%);
+    color: #fff;
+    padding: 100px 0 80px;
+    position: relative;
+    overflow: hidden;
+  }
+  .about-hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 70% 50%, rgba(200,72,90,.18) 0%, transparent 70%),
+                radial-gradient(ellipse 50% 80% at 20% 80%, rgba(184,150,90,.12) 0%, transparent 60%);
+  }
+  .about-hero .hero-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: .75rem; font-weight: 500; letter-spacing: .2em;
+    text-transform: uppercase; color: var(--gold);
+    margin-bottom: 1rem;
+  }
+  .about-hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.4rem, 5vw, 3.8rem);
+    line-height: 1.15; font-weight: 700;
+    margin-bottom: 1.4rem;
+  }
+  .about-hero h1 em { color: var(--gold); font-style: italic; }
+  .about-hero p {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1.1rem; line-height: 1.8;
+    color: rgba(255,255,255,.75); max-width: 520px;
+  }
+  .hero-stat {
+    display: inline-block;
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 12px;
+    padding: 16px 28px;
+    text-align: center;
+    backdrop-filter: blur(6px);
+  }
+  .hero-stat .num {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem; color: var(--gold); display: block;
+  }
+  .hero-stat .lbl {
+    font-family: 'DM Sans', sans-serif;
+    font-size: .78rem; color: rgba(255,255,255,.6);
+    text-transform: uppercase; letter-spacing: .12em;
+  }
+  .hero-deco {
+    position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+    width: 420px; opacity: .06;
+    font-family: 'Playfair Display', serif;
+    font-size: 18rem; line-height: 1; user-select: none;
+    color: #fff; pointer-events: none;
+  }
+
+  /* ── Sections ── */
+  .section-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: .72rem; font-weight: 500; letter-spacing: .22em;
+    text-transform: uppercase; color: var(--rose);
+    margin-bottom: .6rem;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 3.5vw, 2.5rem);
+    color: var(--dark); margin-bottom: 1rem;
+  }
+  .section-body {
+    font-family: 'DM Sans', sans-serif;
+    color: var(--muted); line-height: 1.85; font-size: 1rem;
+  }
+
+  /* ── Story ── */
+  .story-section { padding: 80px 0; background: var(--cream); }
+  .story-img-wrap {
+    border-radius: 16px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(26,20,16,.15);
+    position: relative;
+  }
+  .story-img-wrap img { width: 100%; height: 420px; object-fit: cover; }
+  .story-badge {
+    position: absolute; bottom: 24px; left: 24px;
+    background: var(--dark); color: #fff;
+    border-radius: 10px; padding: 14px 20px;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .story-badge strong { font-size: 1.6rem; color: var(--gold); display: block; }
+  .story-badge span { font-size: .8rem; color: rgba(255,255,255,.7); }
+
+  /* ── Values ── */
+  .values-section { padding: 80px 0; background: #fff; }
+  .value-card {
+    border: 1px solid var(--border);
+    border-radius: 16px; padding: 36px 28px;
+    transition: all .3s; background: #fff;
+    position: relative; overflow: hidden;
+  }
+  .value-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--rose), var(--gold));
+    opacity: 0; transition: opacity .3s;
+    border-radius: 16px;
+  }
+  .value-card:hover::before { opacity: 1; }
+  .value-card:hover { transform: translateY(-6px); color: #fff; border-color: transparent; }
+  .value-card:hover .value-icon,
+  .value-card:hover .value-title,
+  .value-card:hover .value-desc { color: #fff !important; }
+  .value-icon { font-size: 2.2rem; margin-bottom: 1rem; position: relative; z-index: 1; }
+  .value-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem; color: var(--dark);
+    margin-bottom: .6rem; position: relative; z-index: 1;
+  }
+  .value-desc {
+    font-family: 'DM Sans', sans-serif;
+    font-size: .9rem; color: var(--muted); line-height: 1.7;
+    position: relative; z-index: 1;
+  }
+
+  /* ── Team ── */
+  .team-section { padding: 80px 0; background: var(--cream); }
+  .team-card {
+    background: #fff; border-radius: 16px; overflow: hidden;
+    box-shadow: 0 4px 20px rgba(26,20,16,.07);
+    transition: transform .3s;
+  }
+  .team-card:hover { transform: translateY(-6px); }
+  .team-avatar {
+    width: 100%; height: 220px; object-fit: cover;
+    background: linear-gradient(135deg, #e8d5c0, #c8a88a);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 4rem;
+  }
+  .team-info { padding: 20px; }
+  .team-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem; color: var(--dark); margin-bottom: 2px;
+  }
+  .team-role {
+    font-family: 'DM Sans', sans-serif;
+    font-size: .82rem; color: var(--rose); text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+
+  /* ── Branches ── */
+  .branches-section { padding: 80px 0; background: #fff; }
+  .branch-card {
+    border: 1px solid var(--border); border-radius: 16px;
+    overflow: hidden; transition: all .3s;
+    cursor: pointer; background: #fff;
+  }
+  .branch-card:hover { border-color: var(--rose); box-shadow: 0 8px 32px rgba(200,72,90,.12); transform: translateY(-4px); }
+  .branch-card.active-branch { border-color: var(--rose); box-shadow: 0 8px 32px rgba(200,72,90,.18); }
+  .branch-header {
+    background: linear-gradient(135deg, var(--dark), #2d1f15);
+    color: #fff; padding: 18px 22px;
+  }
+  .branch-header h5 {
+    font-family: 'Playfair Display', serif;
+    margin: 0; font-size: 1rem;
+  }
+  .branch-header .branch-badge {
+    font-family: 'DM Sans', sans-serif;
+    font-size: .72rem; background: var(--rose);
+    border-radius: 20px; padding: 2px 10px;
+  }
+  .branch-body { padding: 18px 22px; }
+  .branch-info-row {
+    display: flex; gap: 10px; margin-bottom: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: .88rem; color: var(--muted);
+    align-items: flex-start;
+  }
+  .branch-info-row .bi { color: var(--rose); margin-top: 2px; flex-shrink: 0; }
+  .branch-hours {
+    margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);
+  }
+  .hour-row { display: flex; justify-content: space-between; font-size: .82rem; margin-bottom: 4px; }
+  .hour-row .day { color: var(--muted); font-family: 'DM Sans', sans-serif; }
+  .hour-row .time { color: var(--dark); font-weight: 500; font-family: 'DM Sans', sans-serif; }
+  .btn-direction {
+    background: linear-gradient(135deg, var(--rose), #a33a4a);
+    color: #fff; border: none; border-radius: 8px;
+    padding: 8px 18px; font-family: 'DM Sans', sans-serif;
+    font-size: .85rem; cursor: pointer; transition: opacity .2s;
+    text-decoration: none; display: inline-block; margin-top: 10px;
+  }
+  .btn-direction:hover { opacity: .9; color: #fff; }
+
+  /* ── Map ── */
+  #branchMap {
+    height: 500px; border-radius: 16px; overflow: hidden;
+    box-shadow: 0 8px 32px rgba(26,20,16,.12);
+  }
+
+  /* ── CTA ── */
+  .cta-section {
+    padding: 80px 0;
+    background: linear-gradient(135deg, var(--dark) 0%, #2d1f15 100%);
+    color: #fff; text-align: center;
+  }
+  .cta-section h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.2rem; margin-bottom: 1rem;
+  }
+  .cta-section h2 em { color: var(--gold); font-style: italic; }
+  .cta-section p {
+    font-family: 'DM Sans', sans-serif;
+    color: rgba(255,255,255,.7); max-width: 500px; margin: 0 auto 2rem;
+  }
+  .btn-cta-primary {
+    background: linear-gradient(135deg, var(--rose), #a33a4a);
+    color: #fff; border: none; border-radius: 50px;
+    padding: 14px 36px; font-family: 'DM Sans', sans-serif;
+    font-size: 1rem; font-weight: 500; cursor: pointer;
+    transition: transform .2s, box-shadow .2s; text-decoration: none;
+    display: inline-block;
+  }
+  .btn-cta-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(200,72,90,.4); color: #fff; }
+  .btn-cta-outline {
+    background: transparent; color: #fff;
+    border: 1.5px solid rgba(255,255,255,.4); border-radius: 50px;
+    padding: 14px 36px; font-family: 'DM Sans', sans-serif;
+    font-size: 1rem; cursor: pointer;
+    transition: all .2s; text-decoration: none; display: inline-block;
+  }
+  .btn-cta-outline:hover { border-color: #fff; color: #fff; }
+
+  /* Leaflet custom popup */
+  .branch-popup h6 { font-family: 'Playfair Display', serif; color: var(--dark); margin-bottom: 6px; }
+  .branch-popup p { font-family: 'DM Sans', sans-serif; font-size: .82rem; color: var(--muted); margin: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ── HERO ── -->
+<div class="about-hero" style="margin: -24px -12px 0; border-radius: 0;">
+  <div class="hero-deco">✿</div>
+  <div class="container position-relative">
+    <div class="row align-items-center">
+      <div class="col-lg-7">
+        <p class="hero-label">Về chúng tôi</p>
+        <h1>Vẻ đẹp <em>chân thực</em><br>từ thiên nhiên</h1>
+        <p>Cosmetic Shop — thương hiệu mỹ phẩm thuần thiên nhiên, chính hãng hàng đầu Việt Nam. Chúng tôi tin rằng mỗi người đều xứng đáng được chăm sóc bằng những sản phẩm an toàn, hiệu quả và bền vững.</p>
+        <div class="d-flex gap-3 mt-4 flex-wrap">
+          <div class="hero-stat">
+            <span class="num">{{ stores|length|default:"5" }}+</span>
+            <span class="lbl">Chi nhánh</span>
+          </div>
+          <div class="hero-stat">
+            <span class="num">10K+</span>
+            <span class="lbl">Khách hàng</span>
+          </div>
+          <div class="hero-stat">
+            <span class="num">{{ total_products|default:"200" }}+</span>
+            <span class="lbl">Sản phẩm</span>
+          </div>
+          <div class="hero-stat">
+            <span class="num">5★</span>
+            <span class="lbl">Đánh giá</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── STORY ── -->
+<div class="story-section" style="margin: 0 -12px;">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-5">
+        <div class="story-img-wrap">
+          <div style="width:100%; height:420px; background: linear-gradient(135deg,#e8d5c0 0%,#c8a88a 50%,#a8785a 100%); display:flex; align-items:center; justify-content:center; font-size:8rem;">🌸</div>
+          <div class="story-badge">
+            <strong>2019</strong>
+            <span>Năm thành lập</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-7">
+        <p class="section-label">Câu chuyện của chúng tôi</p>
+        <h2 class="section-title">Từ đam mê đến thương hiệu</h2>
+        <p class="section-body mb-3">
+          Cosmetic Shop được thành lập năm 2019 bởi nhóm những người trẻ đam mê vẻ đẹp tự nhiên và bền vững. Khởi đầu từ một cửa hàng nhỏ tại Quận Tân Bình, TP.HCM, chúng tôi đã nhanh chóng chinh phục khách hàng bằng cam kết về chất lượng và sự tận tâm.
+        </p>
+        <p class="section-body mb-4">
+          Sau 5 năm phát triển, Cosmetic Shop đã mở rộng lên {{ stores|length|default:"5" }} chi nhánh trên toàn thành phố, phục vụ hàng chục nghìn khách hàng mỗi tháng. Mỗi sản phẩm đều được chọn lọc kỹ càng từ các thương hiệu uy tín trong và ngoài nước, đảm bảo an toàn và hiệu quả tuyệt đối.
+        </p>
+        <div class="d-flex gap-4">
+          <div>
+            <div style="font-family:'Playfair Display',serif; font-size:1.8rem; color:var(--rose);">100%</div>
+            <div style="font-family:'DM Sans',sans-serif; font-size:.85rem; color:var(--muted);">Sản phẩm chính hãng</div>
+          </div>
+          <div>
+            <div style="font-family:'Playfair Display',serif; font-size:1.8rem; color:var(--rose);">30</div>
+            <div style="font-family:'DM Sans',sans-serif; font-size:.85rem; color:var(--muted);">Ngày đổi trả</div>
+          </div>
+          <div>
+            <div style="font-family:'Playfair Display',serif; font-size:1.8rem; color:var(--rose);">24/7</div>
+            <div style="font-family:'DM Sans',sans-serif; font-size:.85rem; color:var(--muted);">Hỗ trợ khách hàng</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── VALUES ── -->
+<div class="values-section" style="margin: 0 -12px;">
+  <div class="container">
+    <div class="text-center mb-5">
+      <p class="section-label">Giá trị cốt lõi</p>
+      <h2 class="section-title">Những điều chúng tôi tin tưởng</h2>
+    </div>
+    <div class="row g-4">
+      {% for val in values %}
+      <div class="col-md-4">
+        <div class="value-card h-100">
+          <div class="value-icon">{{ val.icon }}</div>
+          <div class="value-title">{{ val.title }}</div>
+          <p class="value-desc">{{ val.desc }}</p>
+        </div>
+      </div>
+      {% empty %}
+      <div class="col-md-4">
+        <div class="value-card h-100">
+          <div class="value-icon">🌿</div>
+          <div class="value-title">Thiên nhiên & Thuần chay</div>
+          <p class="value-desc">Ưu tiên thành phần thiên nhiên, không thử nghiệm trên động vật, thân thiện với môi trường trong từng sản phẩm.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="value-card h-100">
+          <div class="value-icon">💎</div>
+          <div class="value-title">Chất lượng & Uy tín</div>
+          <p class="value-desc">100% hàng chính hãng có nguồn gốc rõ ràng, được kiểm định chất lượng nghiêm ngặt trước khi đến tay khách hàng.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="value-card h-100">
+          <div class="value-icon">❤️</div>
+          <div class="value-title">Tận tâm & Chuyên nghiệp</div>
+          <p class="value-desc">Đội ngũ tư vấn viên được đào tạo bài bản, luôn lắng nghe và đồng hành cùng khách hàng trên hành trình làm đẹp.</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- ── BRANCHES ── -->
+<div class="branches-section" style="margin: 0 -12px;">
+  <div class="container">
+    <div class="text-center mb-5">
+      <p class="section-label">Hệ thống chi nhánh</p>
+      <h2 class="section-title">Tìm chúng tôi ở đây</h2>
+      <p class="section-body mx-auto" style="max-width:520px;">{{ stores|length|default:"0" }} chi nhánh trải dài khắp TP.HCM — luôn có một Cosmetic Shop gần bạn.</p>
+    </div>
+
+    <div class="row g-4 mb-5">
+      {% for store in stores %}
+      <div class="col-md-6 col-lg-4">
+        <div class="branch-card" id="branch-card-{{ forloop.counter0 }}"
+             onclick="focusBranch({{ forloop.counter0 }}, {{ store.latitude }}, {{ store.longitude }})">
+          <div class="branch-header d-flex justify-content-between align-items-center">
+            <h5>{{ store.name }}</h5>
+            <span class="branch-badge">Chi nhánh {{ forloop.counter }}</span>
+          </div>
+          <div class="branch-body">
+            <div class="branch-info-row">
+              <i class="bi bi-geo-alt-fill"></i>
+              <span>{{ store.address }}</span>
+            </div>
+            <div class="branch-info-row">
+              <i class="bi bi-telephone-fill"></i>
+              <span>{{ store.phone }}</span>
+            </div>
+            <div class="branch-hours">
+              <div class="hour-row">
+                <span class="day">Thứ 2 – Thứ 6</span>
+                <span class="time">8:00 – 21:00</span>
+              </div>
+              <div class="hour-row">
+                <span class="day">Thứ 7 – CN</span>
+                <span class="time">8:30 – 22:00</span>
+              </div>
+            </div>
+            <a href="{% url 'shop:store_locator' %}?lat={{ store.latitude }}&lng={{ store.longitude }}"
+               class="btn-direction" onclick="event.stopPropagation()">
+              🗺️ Chỉ đường
+            </a>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="col-12 text-center text-muted py-5">
+        <p>Chưa có chi nhánh nào. Vui lòng thêm trong Admin.</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if stores %}
+    <div id="branchMap"></div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── CTA ── -->
+<div class="cta-section" style="margin: 0 -12px;">
+  <div class="container">
+    <h2>Sẵn sàng trải nghiệm<br>vẻ đẹp <em>đích thực</em>?</h2>
+    <p>Khám phá hàng trăm sản phẩm chính hãng hoặc ghé thăm chi nhánh gần nhất để được tư vấn miễn phí.</p>
+    <div class="d-flex gap-3 justify-content-center flex-wrap">
+      <a href="{% url 'shop:product_list' %}" class="btn-cta-primary">Xem sản phẩm</a>
+      <a href="{% url 'shop:store_locator' %}" class="btn-cta-outline">Tìm cửa hàng</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% if stores %}
+<script>
+const BRANCHES = [
+  {% for store in stores %}
+  {
+    lat: {{ store.latitude }},
+    lng: {{ store.longitude }},
+    name: "{{ store.name|escapejs }}",
+    address: "{{ store.address|escapejs }}",
+    phone: "{{ store.phone|escapejs }}"
+  }{% if not forloop.last %},{% endif %}
+  {% endfor %}
+];
+
+const map = L.map('branchMap').setView([10.7769, 106.7009], 12);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap © CARTO'
+}).addTo(map);
+
+const icon = L.icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  iconSize: [25, 41], iconAnchor: [12, 41]
+});
+
+const markers = BRANCHES.map((b, i) => {
+  const m = L.marker([b.lat, b.lng], { icon })
+    .addTo(map)
+    .bindPopup(`
+      <div class="branch-popup">
+        <h6>${b.name}</h6>
+        <p>📍 ${b.address}</p>
+        <p>📞 ${b.phone}</p>
+      </div>
+    `);
+  m.on('click', () => highlightCard(i));
+  return m;
+});
+
+function focusBranch(idx, lat, lng) {
+  map.setView([lat, lng], 16);
+  markers[idx].openPopup();
+  document.querySelectorAll('.branch-card').forEach(c => c.classList.remove('active-branch'));
+  document.getElementById('branch-card-' + idx)?.classList.add('active-branch');
+  document.getElementById('branchMap').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function highlightCard(idx) {
+  document.querySelectorAll('.branch-card').forEach(c => c.classList.remove('active-branch'));
+  const card = document.getElementById('branch-card-' + idx);
+  if (card) {
+    card.classList.add('active-branch');
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+</script>
+{% endif %}
+{% endblock %}

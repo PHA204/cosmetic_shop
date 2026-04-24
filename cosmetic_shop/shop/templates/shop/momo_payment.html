@@ -1,0 +1,276 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}Thanh toán MoMo - Cosmetic Shop{% endblock %}
+
+{% block extra_css %}
+<style>
+  .momo-wrapper {
+    max-width: 520px; margin: 0 auto;
+  }
+  .momo-card {
+    border: none; border-radius: 20px;
+    box-shadow: 0 8px 40px rgba(0,0,0,.1);
+    overflow: hidden;
+  }
+  .momo-header {
+    background: linear-gradient(135deg, #ae2070, #d82d8b);
+    color: #fff; padding: 28px 32px; text-align: center;
+  }
+  .momo-header .momo-logo {
+    width: 64px; height: 64px; background: #fff;
+    border-radius: 18px; margin: 0 auto 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; box-shadow: 0 4px 16px rgba(0,0,0,.2);
+  }
+  .momo-header h4 { margin: 0; font-weight: 700; font-size: 1.3rem; }
+  .momo-header p { margin: 4px 0 0; opacity: .85; font-size: .9rem; }
+  .momo-body { padding: 28px 32px; background: #fff; }
+  .momo-amount {
+    background: #fdf0f7; border-radius: 14px;
+    padding: 20px; text-align: center; margin-bottom: 24px;
+    border: 1.5px dashed #e090c4;
+  }
+  .momo-amount .label { font-size: .8rem; color: #888; text-transform: uppercase; letter-spacing: .1em; }
+  .momo-amount .amount { font-size: 2.2rem; font-weight: 800; color: #ae2070; line-height: 1.2; }
+  .momo-amount .order-id { font-size: .85rem; color: #666; margin-top: 4px; }
+
+  /* QR box */
+  .qr-box {
+    background: #fff; border: 2px solid #f0e0ec;
+    border-radius: 16px; padding: 24px; text-align: center; margin-bottom: 20px;
+  }
+  .qr-frame {
+    width: 200px; height: 200px; margin: 0 auto 12px;
+    background: linear-gradient(135deg, #f8e8f4, #f0d0e8);
+    border-radius: 12px; display: flex; align-items: center;
+    justify-content: center; font-size: 5rem;
+    position: relative; overflow: hidden;
+  }
+  .qr-frame::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 8px, rgba(174,32,112,.06) 8px, rgba(174,32,112,.06) 9px),
+                repeating-linear-gradient(90deg, transparent, transparent 8px, rgba(174,32,112,.06) 8px, rgba(174,32,112,.06) 9px);
+  }
+  .qr-note { font-size: .82rem; color: #888; }
+
+  /* Steps */
+  .step-list { list-style: none; padding: 0; margin: 0 0 20px; }
+  .step-list li {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 8px 0; border-bottom: 1px solid #f5f5f5;
+  }
+  .step-list li:last-child { border-bottom: none; }
+  .step-num {
+    width: 26px; height: 26px; flex-shrink: 0;
+    background: linear-gradient(135deg, #ae2070, #d82d8b);
+    border-radius: 50%; color: #fff; font-size: .78rem;
+    display: flex; align-items: center; justify-content: center; font-weight: 700;
+  }
+  .step-text { font-size: .88rem; color: #444; padding-top: 3px; line-height: 1.5; }
+
+  /* Account info */
+  .momo-account {
+    background: #fdf0f7; border-radius: 12px; padding: 16px;
+    margin-bottom: 20px; border: 1px solid #f0d0e8;
+  }
+  .momo-account .acc-label { font-size: .75rem; color: #888; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 8px; }
+  .momo-account .acc-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .momo-account .acc-key { font-size: .85rem; color: #666; }
+  .momo-account .acc-val { font-size: .92rem; font-weight: 700; color: #ae2070; }
+  .copy-btn {
+    background: none; border: 1px solid #e090c4; border-radius: 6px;
+    color: #ae2070; font-size: .75rem; padding: 2px 8px; cursor: pointer;
+    transition: background .2s;
+  }
+  .copy-btn:hover { background: #f5d0e8; }
+
+  /* Timer */
+  .timer-box {
+    background: #fff8f0; border: 1px solid #ffd0a0;
+    border-radius: 10px; padding: 12px 16px; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .timer-box .icon { font-size: 1.4rem; }
+  .timer-box .timer-text { font-size: .85rem; color: #555; flex: 1; }
+  .timer-box #countdown { font-weight: 700; color: #e07000; font-size: 1rem; }
+
+  /* Buttons */
+  .btn-confirm-momo {
+    background: linear-gradient(135deg, #ae2070, #d82d8b);
+    color: #fff; border: none; border-radius: 12px;
+    padding: 14px; width: 100%; font-size: 1rem; font-weight: 600;
+    cursor: pointer; transition: opacity .2s, transform .2s;
+  }
+  .btn-confirm-momo:hover { opacity: .92; transform: translateY(-1px); }
+  .btn-cancel { 
+    display: block; text-align: center; margin-top: 12px;
+    color: #999; font-size: .88rem; text-decoration: none;
+  }
+  .btn-cancel:hover { color: #ae2070; }
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #e8f8f0; color: #1a7a4a; border-radius: 20px;
+    padding: 4px 12px; font-size: .8rem; font-weight: 600;
+  }
+  .status-badge .dot { width: 8px; height: 8px; background: #2ecc71; border-radius: 50%; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="momo-wrapper">
+
+  <!-- Back -->
+  <a href="{% url 'shop:checkout' %}" class="btn btn-outline-secondary btn-sm mb-3">
+    ← Quay lại thanh toán
+  </a>
+
+  <div class="momo-card">
+    <!-- Header -->
+    <div class="momo-header">
+      <div class="momo-logo">💜</div>
+      <h4>Thanh toán qua MoMo</h4>
+      <p>Ví điện tử MoMo — An toàn & Nhanh chóng</p>
+    </div>
+
+    <!-- Body -->
+    <div class="momo-body">
+
+      <!-- Số tiền -->
+      <div class="momo-amount">
+        <div class="label">Số tiền cần thanh toán</div>
+        <div class="amount" id="totalDisplay">—</div>
+        <div class="order-id">Đơn hàng <strong>#{{ order_id }}</strong></div>
+      </div>
+
+      <!-- Timer -->
+      <div class="timer-box">
+        <span class="icon">⏱️</span>
+        <span class="timer-text">Giao dịch hết hạn sau</span>
+        <span id="countdown">15:00</span>
+      </div>
+
+      <!-- MoMo account -->
+      <div class="momo-account">
+        <div class="acc-label">Thông tin chuyển khoản MoMo</div>
+        <div class="acc-row">
+          <span class="acc-key">Số điện thoại</span>
+          <span class="acc-val" id="momoPhone">0901 234 567</span>
+          <button class="copy-btn" onclick="copyText('0901234567', this)">Sao chép</button>
+        </div>
+        <div class="acc-row">
+          <span class="acc-key">Tên tài khoản</span>
+          <span class="acc-val">COSMETIC SHOP</span>
+        </div>
+        <div class="acc-row">
+          <span class="acc-key">Nội dung CK</span>
+          <span class="acc-val" id="transferContent">DONHANG{{ order_id }}</span>
+          <button class="copy-btn" onclick="copyText('DONHANG{{ order_id }}', this)">Sao chép</button>
+        </div>
+      </div>
+
+      <!-- QR Code -->
+      <div class="qr-box">
+        <div class="qr-box">
+          {% if qr_base64 %}
+          <img src="data:image/png;base64,{{ qr_base64 }}"
+              style="width:200px; height:200px; border-radius:12px;"
+              alt="MoMo QR Code">
+          {% else %}
+          <div class="qr-frame">📱</div>
+          {% endif %}
+          <p class="qr-note mt-2">Mở ứng dụng MoMo → Quét mã QR để thanh toán nhanh</p>
+          <span class="status-badge">
+            <span class="dot"></span> Đang chờ thanh toán
+          </span>
+        </div>
+        <p class="qr-note">Mở ứng dụng MoMo → Quét mã QR để thanh toán nhanh</p>
+        <span class="status-badge">
+          <span class="dot"></span> Đang chờ thanh toán
+        </span>
+      </div>
+
+      <!-- Steps -->
+      <p style="font-size:.82rem; font-weight:600; color:#333; margin-bottom:10px;">Hướng dẫn thanh toán:</p>
+      <ul class="step-list">
+        <li>
+          <span class="step-num">1</span>
+          <span class="step-text">Mở ứng dụng <strong>MoMo</strong> trên điện thoại</span>
+        </li>
+        <li>
+          <span class="step-num">2</span>
+          <span class="step-text">Chọn <strong>Quét mã / Chuyển tiền</strong> và nhập SĐT <strong>0901 234 567</strong></span>
+        </li>
+        <li>
+          <span class="step-num">3</span>
+          <span class="step-text">Nhập số tiền và nội dung <strong>DONHANG{{ order_id }}</strong></span>
+        </li>
+        <li>
+          <span class="step-num">4</span>
+          <span class="step-text">Xác nhận thanh toán và nhấn <strong>"Đã thanh toán"</strong> bên dưới</span>
+        </li>
+      </ul>
+
+      <!-- Confirm button -->
+      <form method="post" action="{% url 'shop:momo_confirm' order_id %}">
+        {% csrf_token %}
+        <button type="submit" class="btn-confirm-momo">
+          ✅ Tôi đã thanh toán xong
+        </button>
+      </form>
+
+      <a href="{% url 'shop:home' %}" class="btn-cancel">Hủy và về trang chủ</a>
+    </div>
+  </div>
+
+  <!-- Bảo mật -->
+  <div class="text-center mt-3">
+    <small class="text-muted">🔒 Giao dịch được bảo mật bởi SSL 256-bit</small>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Lấy tổng tiền từ localStorage (giống checkout.html)
+function formatPrice(n) {
+  return new Intl.NumberFormat('vi-VN').format(Math.round(n)) + 'đ';
+}
+
+const savedTotal = localStorage.getItem('pendingOrderTotal');
+if (savedTotal) {
+  document.getElementById('totalDisplay').textContent = formatPrice(parseFloat(savedTotal));
+} else {
+  document.getElementById('totalDisplay').textContent = '{{ order_total|floatformat:0 }}đ';
+}
+
+// Countdown 15 phút
+let seconds = 15 * 60;
+const countdown = document.getElementById('countdown');
+const interval = setInterval(() => {
+  seconds--;
+  if (seconds <= 0) {
+    clearInterval(interval);
+    countdown.textContent = '00:00';
+    countdown.style.color = '#e00';
+    return;
+  }
+  const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+  const s = String(seconds % 60).padStart(2, '0');
+  countdown.textContent = `${m}:${s}`;
+  if (seconds < 60) countdown.style.color = '#e00';
+}, 1000);
+
+// Copy to clipboard
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Đã sao chép!';
+    btn.style.background = '#d0f0e0';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 2000);
+  });
+}
+</script>
+{% endblock %}

@@ -20,7 +20,6 @@
                         <th>Tên cửa hàng</th>
                         <th>Địa chỉ</th>
                         <th>Số điện thoại</th>
-                        <th>Tọa độ</th>
                         <th>Thao tác</th>
                     </tr>
                 </thead>
@@ -31,12 +30,7 @@
                         <td><strong>{{ store.name }}</strong></td>
                         <td>{{ store.address }}</td>
                         <td>{{ store.phone }}</td>
-                        <td>
-                            <small class="text-muted">
-                                {{ store.latitude|floatformat:4 }}, {{ store.longitude|floatformat:4 }}
-                            </small>
-                        </td>
-                        <td>
+                                                <td>
                             <div class="d-flex gap-1">
                                 <a href="{% url 'shop:admin_store_edit' store.id %}"
                                    class="btn btn-sm btn-outline-primary" title="Sửa">

@@ -1,0 +1,290 @@
+{% extends 'shop/admin/base.html' %}
+
+{% block page_title %}Chi tiết Shipper{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body, .card { font-family: 'Be Vietnam Pro', sans-serif; }
+
+  .profile-card {
+    background: linear-gradient(145deg, #1a1410 0%, #2d1f15 100%);
+    border-radius: 20px; padding: 32px;
+    color: #fff; position: relative; overflow: hidden;
+    box-shadow: 0 12px 40px rgba(26,20,16,.3);
+  }
+  .profile-card::before {
+    content: '';
+    position: absolute; top: -60px; right: -60px;
+    width: 200px; height: 200px; border-radius: 50%;
+    background: rgba(200,72,90,.15);
+  }
+  .profile-avatar {
+    width: 90px; height: 90px; border-radius: 50%;
+    object-fit: cover; border: 4px solid rgba(255,255,255,.25);
+    box-shadow: 0 4px 16px rgba(0,0,0,.3);
+  }
+  .profile-avatar-ph {
+    width: 90px; height: 90px; border-radius: 50%;
+    background: rgba(255,255,255,.12); border: 4px solid rgba(255,255,255,.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.5rem;
+  }
+  .profile-name  { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
+  .profile-phone { font-size: .9rem; opacity: .75; }
+
+  .status-badge-lg {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 14px; border-radius: 20px; font-size: .82rem; font-weight: 600;
+  }
+  .status-badge-lg.active   { background: rgba(25,135,84,.25); color: #7eefc0; }
+  .status-badge-lg.busy     { background: rgba(13,110,253,.25); color: #90c0ff; }
+  .status-badge-lg.inactive { background: rgba(108,117,125,.25); color: #ccc; }
+  .status-badge-lg .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .status-badge-lg.active .dot { animation: blink 1.4s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  /* stat pills in profile */
+  .profile-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+  .p-stat {
+    background: rgba(255,255,255,.1); border-radius: 12px;
+    padding: 12px 20px; text-align: center; flex: 1; min-width: 100px;
+  }
+  .p-stat .val { font-size: 1.6rem; font-weight: 700; }
+  .p-stat .lbl { font-size: .72rem; opacity: .65; }
+
+  /* info row */
+  .info-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid #f5f5f5; font-size: .9rem;
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-row .info-icon { width: 32px; height: 32px; border-radius: 8px;
+    background: #f5f0f8; display: flex; align-items: center;
+    justify-content: center; font-size: 1rem; flex-shrink: 0; }
+  .info-row .info-label { color: #999; font-size: .78rem; }
+  .info-row .info-value { color: #1a1410; font-weight: 500; }
+
+  /* order table */
+  .order-status-pill {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: .75rem; font-weight: 600;
+  }
+
+  /* filter tabs */
+  .order-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .order-tab {
+    padding: 5px 14px; border-radius: 20px; font-size: .82rem;
+    border: 1.5px solid #e0e0e0; background: #fff; text-decoration: none;
+    color: #555; transition: all .2s;
+  }
+  .order-tab:hover, .order-tab.active-tab { background: #1a1410; color: #fff; border-color: #1a1410; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+  <a href="{% url 'shop:admin_shippers' %}" class="btn btn-outline-secondary btn-sm">
+    ← Quay lại danh sách
+  </a>
+</div>
+
+<div class="row g-4">
+  <!-- ── Cột trái: Profile ── -->
+  <div class="col-lg-4">
+
+    <!-- Profile card -->
+    <div class="profile-card mb-4">
+      <div class="d-flex gap-3 align-items-center position-relative">
+        {% if shipper.avatar %}
+        <img src="{{ shipper.avatar.url }}" class="profile-avatar" alt="{{ shipper.name }}">
+        {% else %}
+        <div class="profile-avatar-ph">🧑</div>
+        {% endif %}
+        <div>
+          <div class="profile-name">{{ shipper.name }}</div>
+          <div class="profile-phone">📞 {{ shipper.phone }}</div>
+          <div class="mt-2">
+            <span class="status-badge-lg {{ shipper.status }}">
+              <span class="dot"></span>
+              {{ shipper.get_status_display }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-stats">
+        <div class="p-stat">
+          <div class="val">{{ stats.active_orders }}</div>
+          <div class="lbl">Đang giao</div>
+        </div>
+        <div class="p-stat">
+          <div class="val">{{ stats.delivered|default:0 }}</div>
+          <div class="lbl">Đã giao</div>
+        </div>
+        <div class="p-stat">
+          <div class="val">{{ stats.total_orders|default:0 }}</div>
+          <div class="lbl">Tổng đơn</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info card -->
+    <div class="card mb-4" style="border-radius:16px; border:none; box-shadow:0 2px 12px rgba(0,0,0,.07);">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3" style="color:#1a1410;">Thông tin cá nhân</h6>
+
+        <div class="info-row">
+          <div class="info-icon">📧</div>
+          <div>
+            <div class="info-label">Email</div>
+            <div class="info-value">{{ shipper.email|default:"Chưa cập nhật" }}</div>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-icon">🏍️</div>
+          <div>
+            <div class="info-label">Phương tiện</div>
+            <div class="info-value">{{ shipper.vehicle|default:"Chưa cập nhật" }}</div>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-icon">📍</div>
+          <div>
+            <div class="info-label">Khu vực phụ trách</div>
+            <div class="info-value">{{ shipper.area|default:"Chưa cập nhật" }}</div>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-icon">📅</div>
+          <div>
+            <div class="info-label">Ngày vào làm</div>
+            <div class="info-value">{{ shipper.joined_at|date:"d/m/Y" }}</div>
+          </div>
+        </div>
+        {% if shipper.note %}
+        <div class="info-row">
+          <div class="info-icon">📝</div>
+          <div>
+            <div class="info-label">Ghi chú</div>
+            <div class="info-value">{{ shipper.note }}</div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Revenue -->
+    {% if stats.total_revenue %}
+    <div class="card" style="border-radius:16px; border:none; box-shadow:0 2px 12px rgba(0,0,0,.07); background:linear-gradient(135deg,#f5fdf8,#e8f8f0);">
+      <div class="card-body text-center py-4">
+        <div style="font-size:2rem;">💰</div>
+        <div style="font-size:1.5rem; font-weight:800; color:#198754;">
+          {{ stats.total_revenue|floatformat:0 }}đ
+        </div>
+        <div style="font-size:.8rem; color:#6c757d; margin-top:4px;">
+          Tổng doanh thu đã giao thành công
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="d-grid gap-2 mt-3">
+      <a href="{% url 'shop:admin_shipper_edit' shipper.id %}" class="btn btn-primary">
+        ✏️ Chỉnh sửa thông tin
+      </a>
+      <a href="{% url 'shop:admin_shipper_delete' shipper.id %}" class="btn btn-outline-danger">
+        🗑️ Xóa shipper
+      </a>
+    </div>
+  </div>
+
+  <!-- ── Cột phải: Đơn hàng ── -->
+  <div class="col-lg-8">
+    <div class="card" style="border-radius:16px; border:none; box-shadow:0 2px 12px rgba(0,0,0,.07);">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold mb-0" style="color:#1a1410;">
+            📦 Đơn hàng phụ trách
+            <span class="badge bg-secondary ms-2" style="font-size:.75rem;">{{ orders|length }}</span>
+          </h5>
+        </div>
+
+        <!-- Filter tabs -->
+        <div class="order-tabs">
+          <a href="?{% empty %}" class="order-tab {% if not order_status %}active-tab{% endif %}">
+            Tất cả
+          </a>
+          <a href="?order_status=confirmed"
+             class="order-tab {% if order_status == 'confirmed' %}active-tab{% endif %}">
+            Đã xác nhận
+          </a>
+          <a href="?order_status=shipping"
+             class="order-tab {% if order_status == 'shipping' %}active-tab{% endif %}">
+            Đang giao
+          </a>
+          <a href="?order_status=delivered"
+             class="order-tab {% if order_status == 'delivered' %}active-tab{% endif %}">
+            Đã giao
+          </a>
+          <a href="?order_status=pending"
+             class="order-tab {% if order_status == 'pending' %}active-tab{% endif %}">
+            Chờ xác nhận
+          </a>
+        </div>
+
+        <!-- Orders table -->
+        <div class="table-responsive">
+          <table class="table table-hover mb-0" style="font-size:.88rem;">
+            <thead class="table-light">
+              <tr>
+                <th>Mã đơn</th>
+                <th>Khách hàng</th>
+                <th>Địa chỉ</th>
+                <th>Tổng tiền</th>
+                <th>Trạng thái</th>
+                <th>Ngày đặt</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for order in orders %}
+              <tr>
+                <td>
+                  <a href="{% url 'shop:admin_order_update' order.id %}"
+                     style="font-weight:700; color:#c8485a;">#{{ order.id }}</a>
+                </td>
+                <td>{{ order.customer_name|truncatechars:20 }}</td>
+                <td><small class="text-muted">{{ order.address|truncatechars:30 }}</small></td>
+                <td style="font-weight:700; color:#c8485a;">{{ order.total|floatformat:0 }}đ</td>
+                <td>
+                  <span class="order-status-pill
+                    {% if order.status == 'pending' %}bg-warning text-dark
+                    {% elif order.status == 'confirmed' %}bg-info text-white
+                    {% elif order.status == 'shipping' %}bg-primary text-white
+                    {% else %}bg-success text-white{% endif %}">
+                    {{ order.get_status_display }}
+                  </span>
+                </td>
+                <td><small>{{ order.created_at|date:"d/m/Y" }}</small></td>
+                <td>
+                  <a href="{% url 'shop:admin_order_update' order.id %}"
+                     class="btn btn-sm btn-outline-primary">Chi tiết</a>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="7" class="text-center text-muted py-4">
+                  {% if order_status %}Không có đơn nào với trạng thái này.{% else %}Chưa có đơn hàng nào.{% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

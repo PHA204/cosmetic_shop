@@ -1,0 +1,147 @@
+{# {% extends 'shop/admin/base.html' %}
+ 
+{% block page_title %}Gán Shipper — Đơn #{{ order.id }}{% endblock %}
+ 
+{% block extra_css %}
+<style>
+  .shipper-option {
+    border: 2px solid #eee; border-radius: 14px; padding: 16px 18px;
+    cursor: pointer; transition: all .2s; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .shipper-option:hover { border-color: #c8485a; background: #fff8f8; }
+  .shipper-option input[type=radio]:checked + .shipper-option-inner { color: #c8485a; }
+  .shipper-option.selected { border-color: #c8485a; background: #fff0f2; }
+  .so-avatar {
+    width: 48px; height: 48px; border-radius: 50%; object-fit: cover;
+    flex-shrink: 0;
+  }
+  .so-avatar-ph {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: linear-gradient(135deg,#e8d5e8,#c8a8c8);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; flex-shrink: 0;
+  }
+  .so-name  { font-weight: 600; font-size: .95rem; }
+  .so-meta  { font-size: .8rem; color: #888; }
+  .so-badge { font-size: .72rem; padding: 2px 8px; border-radius: 20px; }
+</style>
+{% endblock %}
+ 
+{% block content %}
+<div class="mb-3">
+  <a href="{% url 'shop:admin_order_update' order.id %}" class="btn btn-outline-secondary btn-sm">← Quay lại đơn hàng</a>
+</div>
+ 
+<div class="row g-4">
+  <div class="col-md-4">
+    <div class="card" style="border-radius:16px; border:none; box-shadow:0 2px 12px rgba(0,0,0,.07);">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3">Thông tin đơn hàng</h6>
+        <p class="mb-1"><strong>Mã đơn:</strong> #{{ order.id }}</p>
+        <p class="mb-1"><strong>Khách hàng:</strong> {{ order.customer_name }}</p>
+        <p class="mb-1"><strong>SĐT:</strong> {{ order.phone }}</p>
+        <p class="mb-1"><strong>Địa chỉ:</strong> {{ order.address }}</p>
+        <p class="mb-1"><strong>Tổng tiền:</strong>
+          <span class="text-danger fw-bold">{{ order.total|floatformat:0 }}đ</span>
+        </p>
+        <p class="mb-0"><strong>Trạng thái:</strong>
+          <span class="badge bg-{% if order.status == 'pending' %}warning
+            {% elif order.status == 'confirmed' %}info
+            {% elif order.status == 'shipping' %}primary
+            {% else %}success{% endif %}">
+            {{ order.get_status_display }}
+          </span>
+        </p>
+        {% if current_shipper %}
+        <hr>
+        <p class="mb-0 text-muted" style="font-size:.85rem;">
+          <strong>Shipper hiện tại:</strong><br>
+          {{ current_shipper.name }} — {{ current_shipper.phone }}
+        </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+ 
+  <div class="col-md-8">
+    <div class="card" style="border-radius:16px; border:none; box-shadow:0 2px 12px rgba(0,0,0,.07);">
+      <div class="card-body">
+        <h6 class="fw-bold mb-1">Chọn Shipper</h6>
+        <p class="text-muted mb-3" style="font-size:.85rem;">
+          Chọn shipper sẽ phụ trách đơn này. Nếu đơn đang ở trạng thái "Đã xác nhận",
+          sẽ tự động chuyển sang "Đang giao".
+        </p>
+ 
+        <form method="post" action="{% url 'shop:admin_assign_shipper' order.id %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'shop:admin_orders' %}">
+ 
+          {% if available_shippers %}
+            <!-- Bỏ gán shipper -->
+            <label class="shipper-option" id="so-none">
+              <input type="radio" name="shipper_id" value=""
+                     {% if not current_shipper %}checked{% endif %}
+                     onchange="selectSO(this)">
+              <div class="so-avatar-ph" style="background:#f0f0f0; color:#999;">✕</div>
+              <div>
+                <div class="so-name" style="color:#999;">Không gán shipper</div>
+                <div class="so-meta">Bỏ gán shipper khỏi đơn này</div>
+              </div>
+            </label>
+ 
+            {% for s in available_shippers %}
+            <label class="shipper-option {% if current_shipper.id == s.id %}selected{% endif %}"
+                   id="so-{{ s.id }}">
+              <input type="radio" name="shipper_id" value="{{ s.id }}"
+                     {% if current_shipper.id == s.id %}checked{% endif %}
+                     onchange="selectSO(this)">
+              {% if s.avatar %}
+              <img src="{{ s.avatar.url }}" class="so-avatar">
+              {% else %}
+              <div class="so-avatar-ph">🧑</div>
+              {% endif %}
+              <div class="flex-grow-1">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div class="so-name">{{ s.name }}</div>
+                  <span class="so-badge badge
+                    {% if s.status == 'active' %}bg-success
+                    {% elif s.status == 'busy' %}bg-primary
+                    {% else %}bg-secondary{% endif %}">
+                    {{ s.get_status_display }}
+                  </span>
+                </div>
+                <div class="so-meta">📞 {{ s.phone }}
+                  {% if s.area %} · 📍 {{ s.area }}{% endif %}
+                  · 📦 {{ s.active_orders_count }} đơn đang giao
+                </div>
+              </div>
+            </label>
+            {% endfor %}
+ 
+          {% else %}
+          <div class="alert alert-warning">
+            Không có shipper nào đang hoạt động. Vui lòng thêm shipper trước.
+            <a href="{% url 'shop:admin_shipper_create' %}">Thêm ngay</a>
+          </div>
+          {% endif %}
+ 
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary px-4">✅ Xác nhận gán</button>
+            <a href="{% url 'shop:admin_order_update' order.id %}" class="btn btn-outline-secondary">Hủy</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+ 
+{% block extra_js %}
+<script>
+function selectSO(radio) {
+  document.querySelectorAll('.shipper-option').forEach(el => el.classList.remove('selected'));
+  radio.closest('.shipper-option').classList.add('selected');
+}
+</script>
+{% endblock %} #}

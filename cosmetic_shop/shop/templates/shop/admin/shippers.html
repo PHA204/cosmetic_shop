@@ -1,0 +1,356 @@
+{% extends 'shop/admin/base.html' %}
+
+{% block page_title %}Quản lý Shipper{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body, .card, table { font-family: 'Be Vietnam Pro', sans-serif; }
+
+  /* ── KPI strip ── */
+  .kpi-strip { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+  .kpi-chip {
+    flex: 1; min-width: 130px;
+    background: #fff; border-radius: 14px;
+    padding: 18px 20px;
+    border-top: 4px solid var(--c);
+    box-shadow: 0 2px 10px rgba(0,0,0,.06);
+    display: flex; align-items: center; gap: 14px;
+  }
+  .kpi-chip .kpi-icon { font-size: 1.8rem; }
+  .kpi-chip .kpi-num  { font-size: 1.7rem; font-weight: 700; color: var(--c); line-height: 1; }
+  .kpi-chip .kpi-lbl  { font-size: .75rem; color: #888; margin-top: 2px; }
+
+  /* ── Shipper card grid ── */
+  .shipper-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 18px; }
+  .shipper-card {
+    background: #fff; border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.07);
+    overflow: hidden; transition: transform .25s, box-shadow .25s;
+    border: 1.5px solid transparent;
+  }
+  .shipper-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 28px rgba(0,0,0,.12);
+    border-color: #e0d0d8;
+  }
+
+  /* Card header strip */
+  .sc-header {
+    height: 8px;
+    background: var(--strip, #ccc);
+  }
+  .sc-header.active   { --strip: linear-gradient(90deg,#198754,#20c997); }
+  .sc-header.busy     { --strip: linear-gradient(90deg,#0d6efd,#6610f2); }
+  .sc-header.inactive { --strip: linear-gradient(90deg,#adb5bd,#6c757d); }
+
+  .sc-body { padding: 20px; }
+
+  /* Avatar */
+  .sc-avatar {
+    width: 64px; height: 64px; border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #f0e8f0;
+    box-shadow: 0 2px 8px rgba(0,0,0,.12);
+  }
+  .sc-avatar-placeholder {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: linear-gradient(135deg, #e8d5e8, #c8a8c8);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem; border: 3px solid #f0e8f0;
+    flex-shrink: 0;
+  }
+
+  .sc-name { font-size: 1rem; font-weight: 700; color: #1a1410; margin-bottom: 2px; }
+  .sc-phone { font-size: .82rem; color: #666; }
+
+  .sc-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: .72rem; font-weight: 600;
+  }
+  .sc-badge.active   { background: #d1f0e0; color: #198754; }
+  .sc-badge.busy     { background: #dce8ff; color: #0d6efd; }
+  .sc-badge.inactive { background: #f0f0f0; color: #6c757d; }
+  .sc-badge .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: currentColor;
+  }
+  .sc-badge.active .dot   { animation: blink 1.4s infinite; }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  .sc-meta { font-size: .8rem; color: #888; margin-top: 10px; }
+  .sc-meta i { width: 16px; }
+
+  .sc-stats {
+    display: flex; gap: 0; margin: 14px -20px 0;
+    border-top: 1px solid #f5f5f5;
+  }
+  .sc-stat {
+    flex: 1; text-align: center; padding: 12px 8px;
+    border-right: 1px solid #f5f5f5;
+  }
+  .sc-stat:last-child { border-right: none; }
+  .sc-stat .val { font-size: 1.2rem; font-weight: 700; color: #1a1410; }
+  .sc-stat .lbl { font-size: .7rem; color: #aaa; }
+
+  .sc-actions {
+    display: flex; gap: 8px; padding: 12px 20px;
+    background: #fafafa; border-top: 1px solid #f0f0f0;
+  }
+  .sc-actions .btn { flex: 1; font-size: .8rem; border-radius: 8px; padding: 6px; }
+
+  /* ── Filter bar ── */
+  .filter-card {
+    background: #fff; border-radius: 12px;
+    padding: 14px 18px; margin-bottom: 20px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.06);
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  .status-filter-btn {
+    padding: 5px 14px; border-radius: 20px; font-size: .82rem;
+    border: 1.5px solid #e0e0e0; background: #fff; cursor: pointer;
+    transition: all .2s; text-decoration: none; color: #555;
+  }
+  .status-filter-btn.active-filter,
+  .status-filter-btn:hover { background: #1a1410; color: #fff; border-color: #1a1410; }
+
+  /* toggle view */
+  #tableView { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── KPI strip ── -->
+<div class="kpi-strip">
+  <div class="kpi-chip" style="--c:#1a1410">
+    <div class="kpi-icon"></div>
+    <div>
+      <div class="kpi-num">{{ stats.total }}</div>
+      <div class="kpi-lbl">Tổng shipper</div>
+    </div>
+  </div>
+  <div class="kpi-chip" style="--c:#198754">
+    <div class="kpi-icon"></div>
+    <div>
+      <div class="kpi-num">{{ stats.active }}</div>
+      <div class="kpi-lbl">Đang hoạt động</div>
+    </div>
+  </div>
+  <div class="kpi-chip" style="--c:#0d6efd">
+    <div class="kpi-icon"></div>
+    <div>
+      <div class="kpi-num">{{ stats.busy }}</div>
+      <div class="kpi-lbl">Đang giao hàng</div>
+    </div>
+  </div>
+  <div class="kpi-chip" style="--c:#adb5bd">
+    <div class="kpi-icon"></div>
+    <div>
+      <div class="kpi-num">{{ stats.inactive }}</div>
+      <div class="kpi-lbl">Tạm nghỉ</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Filter + actions ── -->
+<div class="filter-card">
+  <form method="get" class="d-flex gap-2 align-items-center flex-wrap flex-grow-1">
+    <input type="hidden" name="status" value="{{ current_status }}">
+    <input type="text" name="search" class="form-control form-control-sm"
+           placeholder="Tìm tên, SĐT, khu vực..."
+           value="{{ search }}" style="width:220px;">
+    <button class="btn btn-sm btn-primary">Tìm kiếm</button>
+    {% if search %}
+    <a href="?status={{ current_status }}" class="btn btn-sm btn-outline-secondary">✕</a>
+    {% endif %}
+  </form>
+
+  <!-- Status filter pills -->
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="?{% if search %}search={{ search }}&{% endif %}"
+       class="status-filter-btn {% if not current_status %}active-filter{% endif %}">Tất cả</a>
+    <a href="?status=active{% if search %}&search={{ search }}{% endif %}"
+       class="status-filter-btn {% if current_status == 'active' %}active-filter{% endif %}"> Hoạt động</a>
+    <a href="?status=busy{% if search %}&search={{ search }}{% endif %}"
+       class="status-filter-btn {% if current_status == 'busy' %}active-filter{% endif %}"> Đang giao</a>
+    <a href="?status=inactive{% if search %}&search={{ search }}{% endif %}"
+       class="status-filter-btn {% if current_status == 'inactive' %}active-filter{% endif %}"> Tạm nghỉ</a>
+  </div>
+
+  <!-- Toggle view -->
+  <div class="btn-group ms-auto">
+    <button class="btn btn-sm btn-outline-secondary" onclick="toggleView('grid')" id="btnGrid" title="Dạng lưới">⊞</button>
+    <button class="btn btn-sm btn-outline-secondary" onclick="toggleView('table')" id="btnTable" title="Dạng bảng">☰</button>
+  </div>
+
+  <a href="{% url 'shop:admin_shipper_create' %}" class="btn btn-sm btn-primary">
+    <i class="bi bi-plus-circle"></i> Thêm shipper
+  </a>
+</div>
+
+<!-- ── GRID VIEW ── -->
+<div id="gridView">
+  {% if shippers %}
+  <div class="shipper-grid">
+    {% for s in shippers %}
+    <div class="shipper-card">
+      <div class="sc-header {{ s.status }}"></div>
+      <div class="sc-body">
+        <div class="d-flex gap-3 align-items-center">
+          {% if s.avatar %}
+          <img src="{{ s.avatar.url }}" class="sc-avatar" alt="{{ s.name }}">
+          {% else %}
+          <div class="sc-avatar-placeholder">🧑</div>
+          {% endif %}
+          <div class="flex-grow-1">
+            <div class="sc-name">{{ s.name }}</div>
+            <div class="sc-phone"> {{ s.phone }}</div>
+            <div class="mt-1">
+              <span class="sc-badge {{ s.status }}">
+                <span class="dot"></span>
+                {{ s.get_status_display }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sc-meta mt-2">
+          {% if s.vehicle %}<div><i class="bi bi-bicycle"></i> {{ s.vehicle }}</div>{% endif %}
+          {% if s.area %}<div><i class="bi bi-geo-alt"></i> {{ s.area }}</div>{% endif %}
+        </div>
+      </div>
+
+      <!-- Micro stats -->
+      <div class="sc-stats">
+        <div class="sc-stat">
+          <div class="val text-primary">{{ s.active_orders_count }}</div>
+          <div class="lbl">Đang giao</div>
+        </div>
+        <div class="sc-stat">
+          <div class="val text-success">{{ s.total_delivered }}</div>
+          <div class="lbl">Đã giao</div>
+        </div>
+        <div class="sc-stat">
+          <div class="val text-muted">{{ s.joined_at|date:"m/Y" }}</div>
+          <div class="lbl">Từ tháng</div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="sc-actions">
+        <a href="{% url 'shop:admin_shipper_detail' s.id %}"
+           class="btn btn-outline-primary">👁 Chi tiết</a>
+        <a href="{% url 'shop:admin_shipper_edit' s.id %}"
+           class="btn btn-outline-secondary">✏️ Sửa</a>
+        <a href="{% url 'shop:admin_shipper_delete' s.id %}"
+           class="btn btn-outline-danger">🗑</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <div style="font-size:3rem;">🚴</div>
+    <p class="mt-2">{% if search %}Không tìm thấy shipper nào.{% else %}Chưa có shipper nào. Thêm ngay!{% endif %}</p>
+    <a href="{% url 'shop:admin_shipper_create' %}" class="btn btn-primary">+ Thêm shipper</a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── TABLE VIEW ── -->
+<div id="tableView">
+  <div class="card">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0" style="font-family:'Be Vietnam Pro',sans-serif;">
+          <thead class="table-light">
+            <tr>
+              <th>Shipper</th>
+              <th>Số điện thoại</th>
+              <th>Khu vực</th>
+              <th>Phương tiện</th>
+              <th class="text-center">Đang giao</th>
+              <th class="text-center">Đã giao</th>
+              <th>Trạng thái</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in shippers %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  {% if s.avatar %}
+                  <img src="{{ s.avatar.url }}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
+                  {% else %}
+                  <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#e8d5e8,#c8a8c8);display:flex;align-items:center;justify-content:center;font-size:1rem;">🧑</div>
+                  {% endif %}
+                  <strong>{{ s.name }}</strong>
+                </div>
+              </td>
+              <td>{{ s.phone }}</td>
+              <td><small class="text-muted">{{ s.area|default:"—" }}</small></td>
+              <td><small>{{ s.vehicle|default:"—" }}</small></td>
+              <td class="text-center">
+                <span class="badge bg-primary">{{ s.active_orders_count }}</span>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-success">{{ s.total_delivered }}</span>
+              </td>
+              <td>
+                <span class="badge
+                  {% if s.status == 'active' %}bg-success
+                  {% elif s.status == 'busy' %}bg-primary
+                  {% else %}bg-secondary{% endif %}">
+                  {{ s.get_status_display }}
+                </span>
+              </td>
+              <td>
+                <div class="d-flex gap-1">
+                  <a href="{% url 'shop:admin_shipper_detail' s.id %}"
+                     class="btn btn-sm btn-outline-primary">👁</a>
+                  <a href="{% url 'shop:admin_shipper_edit' s.id %}"
+                     class="btn btn-sm btn-outline-secondary">✏️</a>
+                  <a href="{% url 'shop:admin_shipper_delete' s.id %}"
+                     class="btn btn-sm btn-outline-danger">🗑</a>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="text-center text-muted py-4">Chưa có shipper nào.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleView(mode) {
+  const grid  = document.getElementById('gridView');
+  const table = document.getElementById('tableView');
+  const btnG  = document.getElementById('btnGrid');
+  const btnT  = document.getElementById('btnTable');
+  if (mode === 'grid') {
+    grid.style.display = ''; table.style.display = 'none';
+    btnG.classList.add('active'); btnT.classList.remove('active');
+    localStorage.setItem('shipperView', 'grid');
+  } else {
+    grid.style.display = 'none'; table.style.display = '';
+    btnT.classList.add('active'); btnG.classList.remove('active');
+    localStorage.setItem('shipperView', 'table');
+  }
+}
+// Restore preference
+document.addEventListener('DOMContentLoaded', () => {
+  toggleView(localStorage.getItem('shipperView') || 'grid');
+});
+</script>
+{% endblock %}

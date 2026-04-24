@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-
+from django.views.defaults import page_not_found
 app_name = 'shop'
 
 urlpatterns = [
@@ -43,4 +43,32 @@ urlpatterns = [
     path('admin-dashboard/stores/<int:store_id>/edit/', views.admin_store_edit, name='admin_store_edit'),
     path('admin-dashboard/stores/<int:store_id>/delete/', views.admin_store_delete, name='admin_store_delete'),
 
+    path('about/', views.about, name='about'),
+ 
+    # MoMo payment
+    path('payment/momo/<int:order_id>/', views.momo_payment, name='momo_payment'),
+    path('payment/momo/<int:order_id>/confirm/', views.momo_confirm, name='momo_confirm'),
+ 
+    # Admin — Báo cáo doanh thu
+    path('admin-dashboard/revenue/', views.admin_revenue, name='admin_revenue'),
+    
+    # Admin — Shippers
+    path('admin-dashboard/shippers/', views.admin_shippers, name='admin_shippers'),
+    path('admin-dashboard/shippers/add/', views.admin_shipper_create, name='admin_shipper_create'),
+    path('admin-dashboard/shippers/<int:shipper_id>/', views.admin_shipper_detail, name='admin_shipper_detail'),
+    path('admin-dashboard/shippers/<int:shipper_id>/edit/', views.admin_shipper_edit, name='admin_shipper_edit'),
+    path('admin-dashboard/shippers/<int:shipper_id>/delete/', views.admin_shipper_delete, name='admin_shipper_delete'),
+    path('admin-dashboard/orders/<int:order_id>/assign-shipper/', views.admin_assign_shipper, name='admin_assign_shipper'),
+
+     # Search API (gợi ý)
+    path('api/search-suggest/', views.search_ajax, name='search_suggest'),
+ 
+    # Admin — Categories
+    path('admin-dashboard/categories/', views.admin_categories, name='admin_categories'),
+    path('admin-dashboard/categories/add/', views.admin_category_create, name='admin_category_create'),
+    path('admin-dashboard/categories/<int:category_id>/edit/', views.admin_category_edit, name='admin_category_edit'),
+    path('admin-dashboard/categories/<int:category_id>/delete/', views.admin_category_delete, name='admin_category_delete'),
+    
+    # 404
+    
 ]

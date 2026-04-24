@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 — Không tìm thấy trang | Cosmetic Shop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300;1,600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --rose:  #c8485a;
+      --dark:  #1a1410;
+      --gold:  #b8965a;
+      --cream: #faf6f0;
+      --muted: #7a6e65;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--cream);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ── Decorative background petals ── */
+    .bg-petal {
+      position: fixed;
+      border-radius: 50% 0 50% 0;
+      opacity: .055;
+      pointer-events: none;
+      animation: float 8s ease-in-out infinite;
+    }
+    .bg-petal:nth-child(1) { width:320px; height:320px; background:var(--rose);  top:-80px;  left:-80px;  animation-delay:0s; }
+    .bg-petal:nth-child(2) { width:200px; height:200px; background:var(--gold);  bottom:60px; right:-60px; animation-delay:2s; }
+    .bg-petal:nth-child(3) { width:140px; height:140px; background:var(--rose);  bottom:180px;left:40px;  animation-delay:4s; }
+    .bg-petal:nth-child(4) { width:260px; height:260px; background:var(--gold);  top:120px;  right:80px;  animation-delay:1s; }
+    @keyframes float {
+      0%,100% { transform: translateY(0) rotate(0deg); }
+      50%      { transform: translateY(-18px) rotate(6deg); }
+    }
+
+    /* ── Main card ── */
+    .card-404 {
+      position: relative; z-index: 10;
+      text-align: center;
+      padding: 60px 48px 52px;
+      max-width: 560px; width: 90%;
+      background: rgba(255,255,255,.75);
+      backdrop-filter: blur(12px);
+      border-radius: 28px;
+      border: 1px solid rgba(200,72,90,.12);
+      box-shadow: 0 24px 80px rgba(26,20,16,.1),
+                  0 4px 16px rgba(200,72,90,.08);
+      animation: cardIn .7s cubic-bezier(.22,.9,.36,1) both;
+    }
+    @keyframes cardIn {
+      from { opacity:0; transform: translateY(28px) scale(.97); }
+      to   { opacity:1; transform: translateY(0) scale(1); }
+    }
+
+    /* ── 404 number ── */
+    .num-404 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(6rem, 20vw, 9rem);
+      font-weight: 600;
+      line-height: 1;
+      letter-spacing: -.04em;
+      background: linear-gradient(135deg, var(--rose) 0%, var(--gold) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 4px;
+      position: relative;
+      display: inline-block;
+    }
+    .num-404::after {
+      content: '✿';
+      position: absolute;
+      font-size: 1.4rem;
+      top: 8px; right: -28px;
+      -webkit-text-fill-color: var(--rose);
+      animation: spin 6s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    .divider {
+      width: 56px; height: 2px;
+      background: linear-gradient(90deg, var(--rose), var(--gold));
+      border-radius: 2px;
+      margin: 18px auto 22px;
+    }
+
+    .title-404 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 12px;
+      font-style: italic;
+    }
+
+    .desc-404 {
+      font-size: .95rem;
+      color: var(--muted);
+      line-height: 1.75;
+      margin-bottom: 32px;
+      max-width: 380px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ── Buttons ── */
+    .btn-group-404 {
+      display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+    }
+    .btn-primary-404 {
+      background: linear-gradient(135deg, var(--rose), #a33a4a);
+      color: #fff; border: none; border-radius: 50px;
+      padding: 12px 28px; font-family: 'DM Sans', sans-serif;
+      font-size: .9rem; font-weight: 500; cursor: pointer;
+      text-decoration: none; display: inline-block;
+      transition: transform .2s, box-shadow .2s;
+      box-shadow: 0 4px 16px rgba(200,72,90,.3);
+    }
+    .btn-primary-404:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(200,72,90,.4);
+      color: #fff;
+    }
+    .btn-outline-404 {
+      background: transparent; color: var(--dark);
+      border: 1.5px solid rgba(26,20,16,.2); border-radius: 50px;
+      padding: 12px 28px; font-family: 'DM Sans', sans-serif;
+      font-size: .9rem; cursor: pointer;
+      text-decoration: none; display: inline-block;
+      transition: all .2s;
+    }
+    .btn-outline-404:hover {
+      border-color: var(--rose); color: var(--rose);
+      transform: translateY(-2px);
+    }
+
+    /* ── Quick links ── */
+    .quick-links {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(26,20,16,.08);
+    }
+    .quick-links p {
+      font-size: .78rem; color: #aaa;
+      text-transform: uppercase; letter-spacing: .12em;
+      margin-bottom: 12px;
+    }
+    .quick-links-row {
+      display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+    }
+    .quick-link {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #f5f0ec; color: var(--muted);
+      border-radius: 20px; padding: 5px 14px;
+      font-size: .82rem; text-decoration: none;
+      transition: all .18s; border: 1px solid transparent;
+    }
+    .quick-link:hover {
+      background: #fdf0f2; color: var(--rose);
+      border-color: #f0c8cc;
+    }
+
+    /* ── Brand watermark ── */
+    .brand-mark {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      font-family: 'Cormorant Garamond', serif;
+      font-size: .85rem; color: rgba(122,110,101,.4);
+      letter-spacing: .1em; z-index: 5;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background petals -->
+  <div class="bg-petal"></div>
+  <div class="bg-petal"></div>
+  <div class="bg-petal"></div>
+  <div class="bg-petal"></div>
+
+  <!-- Main card -->
+  <div class="card-404">
+    <div class="num-404">404</div>
+    <div class="divider"></div>
+    <h1 class="title-404">Trang không tìm thấy</h1>
+    <p class="desc-404">
+      Trang bạn đang tìm kiếm có thể đã bị xoá, đổi tên hoặc tạm thời không khả dụng.
+      Đừng lo — hãy để chúng tôi đưa bạn về đúng chỗ!
+    </p>
+
+    <div class="btn-group-404">
+      <a href="/" class="btn-primary-404">🏠 Về trang chủ</a>
+      <a href="javascript:history.back()" class="btn-outline-404">← Quay lại</a>
+    </div>
+
+    <!-- Quick links -->
+    <div class="quick-links">
+      <p>Hoặc khám phá</p>
+      <div class="quick-links-row">
+        <a href="/products/" class="quick-link">🛍️ Sản phẩm</a>
+        <a href="/stores/"   class="quick-link">📍 Cửa hàng</a>
+        <a href="/tracking/" class="quick-link">📦 Tra cứu đơn</a>
+        <a href="/about/"    class="quick-link">💌 Giới thiệu</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="brand-mark">✿ Cosmetic Shop</div>
+
+</body>
+</html>

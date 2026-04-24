@@ -31,7 +31,19 @@
                         <label class="form-label">Ghi chú (tùy chọn):</label>
                         <textarea name="note" class="form-control" rows="2"></textarea>
                     </div>
-
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Phương thức thanh toán:</label>
+                        <div class="d-flex gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="payment_method" value="cod" id="pmCOD" checked>
+                                <label class="form-check-label" for="pmCOD">💵 Thanh toán khi nhận hàng</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="payment_method" value="momo" id="pmMoMo">
+                                <label class="form-check-label" for="pmMoMo">💜 Thanh toán MoMo</label>
+                            </div>
+                        </div>
+                    </div>
                     <button type="submit" class="btn btn-success btn-lg w-100" id="submitBtn">
                          Đặt hàng
                     </button>

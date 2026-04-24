@@ -53,14 +53,18 @@
                             <span id="cartBadge" class="badge bg-danger cart-badge" style="display: none;">0</span>
                         </a>
                     </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'shop:about' %}"> Giới thiệu</a>
+                        </li>
+
                     {% if user.is_authenticated %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
                              {{ user.username }}
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#">Đơn hàng của tôi</a></li>
-                            <li><hr class="dropdown-divider"></li>
+                            
+                            
                             <li><a class="dropdown-item" href="{% url 'shop:logout' %}">Đăng xuất</a></li>
                         </ul>
                     </li>
@@ -91,7 +95,7 @@
     </main>
 
     <footer class="bg-light text-center py-3 mt-5">
-        <p class="mb-0">&copy; 2026 Cosmetic Shop - Website bán mỹ phẩm tích hợp GIS</p>
+        <p class="mb-0">&copy; 2026 Cosmetic Shop - Website bán mỹ phẩm </p>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
