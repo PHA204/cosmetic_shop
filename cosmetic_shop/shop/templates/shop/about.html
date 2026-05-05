@@ -257,26 +257,33 @@
   <div class="hero-deco">✿</div>
   <div class="container position-relative">
     <div class="row align-items-center">
+      <div class="col-lg-5">
+        {% if about.hero_image %}
+        <img src="{{ about.hero_image.url }}" alt="Hero Image" class="img-fluid rounded" style="height:auto; max-height:500px; object-fit:cover;">
+        {% else %}
+        <div style="width:100%; height:400px; background: linear-gradient(135deg,#e8d5c0 0%,#c8a88a 50%,#a8785a 100%); display:flex; align-items:center; justify-content:center; font-size:8rem; color:#fff; opacity:0.7;">🌸</div>
+        {% endif %}
+      </div>
       <div class="col-lg-7">
-        <p class="hero-label">Về chúng tôi</p>
-        <h1>Vẻ đẹp <em>chân thực</em><br>từ thiên nhiên</h1>
-        <p>Cosmetic Shop — thương hiệu mỹ phẩm thuần thiên nhiên, chính hãng hàng đầu Việt Nam. Chúng tôi tin rằng mỗi người đều xứng đáng được chăm sóc bằng những sản phẩm an toàn, hiệu quả và bền vững.</p>
+        <p class="hero-label">{{ about.hero_label }}</p>
+        <h1>{{ about.hero_title|safe }}</h1>
+        <p>{{ about.hero_text }}</p>
         <div class="d-flex gap-3 mt-4 flex-wrap">
           <div class="hero-stat">
             <span class="num">{{ stores|length|default:"5" }}+</span>
-            <span class="lbl">Chi nhánh</span>
+            <span class="lbl">{{ about.branches_text }}</span>
           </div>
           <div class="hero-stat">
             <span class="num">10K+</span>
-            <span class="lbl">Khách hàng</span>
+            <span class="lbl">{{ about.customers_text }}</span>
           </div>
           <div class="hero-stat">
             <span class="num">{{ total_products|default:"200" }}+</span>
-            <span class="lbl">Sản phẩm</span>
+            <span class="lbl">{{ about.products_text }}</span>
           </div>
           <div class="hero-stat">
             <span class="num">5★</span>
-            <span class="lbl">Đánh giá</span>
+            <span class="lbl">{{ about.rating_text }}</span>
           </div>
         </div>
       </div>
@@ -290,34 +297,34 @@
     <div class="row align-items-center g-5">
       <div class="col-lg-5">
         <div class="story-img-wrap">
+          {% if about.story_image %}
+          <img src="{{ about.story_image.url }}" alt="Câu chuyện" style="width:100%; height:420px; object-fit:cover;">
+          {% else %}
           <div style="width:100%; height:420px; background: linear-gradient(135deg,#e8d5c0 0%,#c8a88a 50%,#a8785a 100%); display:flex; align-items:center; justify-content:center; font-size:8rem;">🌸</div>
+          {% endif %}
           <div class="story-badge">
-            <strong>2019</strong>
-            <span>Năm thành lập</span>
+            <strong>{{ about.story_year }}</strong>
+            <span>{{ about.story_year_label }}</span>
           </div>
         </div>
       </div>
       <div class="col-lg-7">
-        <p class="section-label">Câu chuyện của chúng tôi</p>
-        <h2 class="section-title">Từ đam mê đến thương hiệu</h2>
-        <p class="section-body mb-3">
-          Cosmetic Shop được thành lập năm 2019 bởi nhóm những người trẻ đam mê vẻ đẹp tự nhiên và bền vững. Khởi đầu từ một cửa hàng nhỏ tại Quận Tân Bình, TP.HCM, chúng tôi đã nhanh chóng chinh phục khách hàng bằng cam kết về chất lượng và sự tận tâm.
-        </p>
-        <p class="section-body mb-4">
-          Sau 5 năm phát triển, Cosmetic Shop đã mở rộng lên {{ stores|length|default:"5" }} chi nhánh trên toàn thành phố, phục vụ hàng chục nghìn khách hàng mỗi tháng. Mỗi sản phẩm đều được chọn lọc kỹ càng từ các thương hiệu uy tín trong và ngoài nước, đảm bảo an toàn và hiệu quả tuyệt đối.
-        </p>
+        <p class="section-label">{{ about.story_label }}</p>
+        <h2 class="section-title">{{ about.story_title }}</h2>
+        <p class="section-body mb-3">{{ about.story_text_1 }}</p>
+        <p class="section-body mb-4">{{ about.story_text_2 }}</p>
         <div class="d-flex gap-4">
           <div>
             <div style="font-family:'Playfair Display',serif; font-size:1.8rem; color:var(--rose);">100%</div>
-            <div style="font-family:'DM Sans',sans-serif; font-size:.85rem; color:var(--muted);">Sản phẩm chính hãng</div>
+            <div style="font-family:'DM Sans',sans-serif; font-size:.85rem; color:var(--muted);">{{ about.authentic_text }}</div>
           </div>
           <div>
             <div style="font-family:'Playfair Display',serif; font-size:1.8rem; color:var(--rose);">30</div>
-            <div style="font-family:'DM Sans',sans-serif; font-size:.85rem; color:var(--muted);">Ngày đổi trả</div>
+            <div style="font-family:'DM Sans',sans-serif; font-size:.85rem; color:var(--muted);">{{ about.return_text }}</div>
           </div>
           <div>
             <div style="font-family:'Playfair Display',serif; font-size:1.8rem; color:var(--rose);">24/7</div>
-            <div style="font-family:'DM Sans',sans-serif; font-size:.85rem; color:var(--muted);">Hỗ trợ khách hàng</div>
+            <div style="font-family:'DM Sans',sans-serif; font-size:.85rem; color:var(--muted);">{{ about.support_text }}</div>
           </div>
         </div>
       </div>
@@ -329,8 +336,8 @@
 <div class="values-section" style="margin: 0 -12px;">
   <div class="container">
     <div class="text-center mb-5">
-      <p class="section-label">Giá trị cốt lõi</p>
-      <h2 class="section-title">Những điều chúng tôi tin tưởng</h2>
+      <p class="section-label">{{ about.values_label }}</p>
+      <h2 class="section-title">{{ about.values_title }}</h2>
     </div>
     <div class="row g-4">
       {% for val in values %}
@@ -338,7 +345,7 @@
         <div class="value-card h-100">
           <div class="value-icon">{{ val.icon }}</div>
           <div class="value-title">{{ val.title }}</div>
-          <p class="value-desc">{{ val.desc }}</p>
+          <p class="value-desc">{{ val.description }}</p>
         </div>
       </div>
       {% empty %}
@@ -428,8 +435,8 @@
 <!-- ── CTA ── -->
 <div class="cta-section" style="margin: 0 -12px;">
   <div class="container">
-    <h2>Sẵn sàng trải nghiệm<br>vẻ đẹp <em>đích thực</em>?</h2>
-    <p>Khám phá hàng trăm sản phẩm chính hãng hoặc ghé thăm chi nhánh gần nhất để được tư vấn miễn phí.</p>
+    <h2>{{ about.cta_title|safe }}</h2>
+    <p>{{ about.cta_text }}</p>
     <div class="d-flex gap-3 justify-content-center flex-wrap">
       <a href="{% url 'shop:product_list' %}" class="btn-cta-primary">Xem sản phẩm</a>
       <a href="{% url 'shop:store_locator' %}" class="btn-cta-outline">Tìm cửa hàng</a>

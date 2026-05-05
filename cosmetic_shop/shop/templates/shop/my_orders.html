@@ -1,0 +1,100 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}Đơn hàng của tôi - Cosmetic Shop{% endblock %}
+
+{% block extra_css %}
+<style>
+    .order-tabs .nav-link { border: none; padding: 12px 20px; font-weight: 500; color: #6c757d; }
+    .order-tabs .nav-link.active { color: #c8485a; border-bottom: 3px solid #c8485a; background: transparent; }
+    .order-tabs .nav-link:hover { color: #c8485a; }
+    .order-card { transition: transform 0.2s; border-left: 4px solid transparent; }
+    .order-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .status-pending { border-left-color: #ffc107; }
+    .status-confirmed { border-left-color: #0dcaf0; }
+    .status-shipping { border-left-color: #0d6efd; }
+    .status-delivered { border-left-color: #198754; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">📦 Đơn hàng của tôi</h1>
+
+<div class="card mb-4">
+    <div class="card-body p-0">
+        <ul class="nav order-tabs nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link {% if tab_active == 'all' %}active{% endif %}" href="{% url 'shop:my_orders' %}">
+                    📋 Tất cả đơn hàng
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if tab_active == 'delivered' %}active{% endif %}" href="{% url 'shop:my_orders' %}?status=delivered">
+                    ✅ Lịch sử giao thành công
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+{% if orders %}
+<div class="row">
+    {% for order in orders %}
+    <div class="col-md-6 mb-4">
+        <div class="card order-card h-100 status-{{ order.status }}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h5 class="mb-1">Đơn hàng #{{ order.id }}</h5>
+                        <small class="text-muted">📅 {{ order.created_at|date:"d/m/Y H:i" }}</small>
+                    </div>
+                    <span class="badge bg-{% if order.status == 'pending' %}warning{% elif order.status == 'confirmed' %}info{% elif order.status == 'shipping' %}primary{% elif order.status == 'delivered' %}success{% endif %}">
+                        {{ order.get_status_display }}
+                    </span>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Tổng tiền:</strong> 
+                    <span class="text-danger fs-5">{{ order.total|floatformat:0 }}đ</span>
+                </div>
+                
+                <div class="mb-3 text-muted" style="font-size: 0.9rem;">
+                    <div>👤 {{ order.customer_name }}</div>
+                    <div>📍 {{ order.address|truncatechars:50 }}</div>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        {% if order.shipper %}
+                        🚚 {{ order.shipper.name }}
+                        {% else %}
+                        Chưa có shipper
+                        {% endif %}
+                    </small>
+                    <a href="{% url 'shop:order_tracking' %}" class="btn btn-sm btn-outline-primary">
+                        Chi tiết & Tra cứu
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if tab_active == 'delivered' and orders|length > 0 %}
+<div class="alert alert-success mt-3">
+    <strong>🎉 Cảm ơn bạn đã mua sắm tại Cosmetic Shop!</strong><br>
+    Bạn có <strong>{{ orders|length }}</strong> đơn hàng đã giao thành công.
+    Đừng quên giới thiệu cho bạn bè để nhận ưu đãi nhé! 💖
+</div>
+{% endif %}
+
+{% else %}
+<div class="text-center py-5">
+    <div style="font-size: 4rem;">📦</div>
+    <h4 class="text-muted mt-3">Chưa có đơn hàng nào</h4>
+    <p class="text-muted">Hãy bắt đầu mua sắm để trải nghiệm dịch vụ của chúng tôi nhé!</p>
+    <a href="{% url 'shop:product_list' %}" class="btn btn-primary mt-2">Xem sản phẩm</a>
+</div>
+{% endif %}
+
+{% endblock %}

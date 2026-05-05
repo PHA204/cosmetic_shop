@@ -97,7 +97,7 @@ var orderMap = L.map('orderMap').setView([{{ order.latitude }}, {{ order.longitu
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
     attribution: '© OpenStreetMap © CARTO'
-}).addTo(map);
+}).addTo(orderMap);
 
 var deliveryIcon = L.icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',

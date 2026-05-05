@@ -24,6 +24,13 @@
     #routeInfo {
         font-size: .9rem;
     }
+    /* Marker có thể kéo */
+    .leaflet-marker-icon {
+        cursor: grab !important;
+    }
+    .leaflet-marker-icon:active {
+        cursor: grabbing !important;
+    }
 </style>
 {% endblock %}
 
@@ -81,11 +88,24 @@
                     </div>
                     {% endif %}
 
-                    <!-- Nút lấy vị trí -->
-                    <button type="button" class="btn btn-success w-100 mt-2"
-                            onclick="getMyLocation()">
-                        📍 Lấy vị trí hiện tại
+                    <!-- Nút lấy vị trí & đặt thủ công -->
+                    <div class="d-flex gap-2 mt-2">
+                        <button type="button" class="btn btn-success flex-fill"
+                                onclick="getMyLocation()">
+                            📍 Lấy vị trí
+                        </button>
+                        <button type="button" class="btn btn-outline-primary flex-fill"
+                                onclick="setMarkerAtCenter()"
+                                title="Click vào vị trí bạn muốn trên bản đồ">
+                            🖱️ Đặt tại đây
+                        </button>
+                    </div>
+                    {% if user_lat and user_lng %}
+                    <button type="button" class="btn btn-outline-danger w-100 mt-2"
+                            onclick="clearUserLocation()">
+                        ✕ Xóa vị trí
                     </button>
+                    {% endif %}
                 </form>
 
                 {% if search or max_distance %}
@@ -160,7 +180,8 @@
         </div>
         {% if not user_lat %}
         <div class="alert alert-info mt-2 py-2">
-            💡 Nhấn <strong>"Lấy vị trí hiện tại"</strong> để bật tính năng <strong>chỉ đường</strong> và lọc khoảng cách.
+            💡 Nhấn <strong>"Lấy vị trí"</strong> để định vị tự động,<br>
+            hoặc <strong>click vào bản đồ</strong> để đặt vị trí thủ công.
         </div>
         {% endif %}
     </div>
@@ -232,26 +253,70 @@ const storeMarkers = STORES.map((s, i) => {
     return marker;
 });
 
-/* ── Marker vị trí người dùng ── */
+/* ── Marker vị trí người dùng (có thể kéo) ── */
 let userMarker = null;
-if (USER_LAT !== null) {
-    userMarker = L.marker([USER_LAT, USER_LNG], { icon: userIcon })
-        .addTo(map)
-        .bindPopup('📍 <b>Vị trí của bạn</b>')
-        .openPopup();
-    map.setView([USER_LAT, USER_LNG], 13);
+let currentLat = USER_LAT;
+let currentLng = USER_LNG;
 
-    {% if max_distance %}
-    L.circle([USER_LAT, USER_LNG], {
-        radius:      {{ max_distance }} * 1000,
-        color:       '#0d6efd',
-        fillColor:   '#0d6efd',
-        fillOpacity: 0.07,
-        weight:      2,
-        dashArray:   '6'
-    }).addTo(map).bindPopup('Bán kính {{ max_distance }}km');
-    {% endif %}
+function createUserMarker(lat, lng) {
+    // Xóa marker cũ
+    if (userMarker) {
+        map.removeLayer(userMarker);
+    }
+    
+    currentLat = lat;
+    currentLng = lng;
+    
+    // Cập nhật hidden inputs
+    document.getElementById('hiddenLat').value = lat;
+    document.getElementById('hiddenLng').value = lng;
+    
+    // Tạo marker mới có thể kéo
+    userMarker = L.marker([lat, lng], {
+        icon: userIcon,
+        draggable: true,
+        autoPan: true
+    }).addTo(map);
+    
+    userMarker.bindPopup('📍 <b>Vị trí của bạn</b><br><small>Kéo marker để chỉnh</small>').openPopup();
+    
+    // Khi kéo xong thì cập nhật
+    userMarker.on('dragend', function(e) {
+        const pos = e.target.getLatLng();
+        createUserMarker(pos.lat, pos.lng);
+        updateUrlAndReload(lat, lng);
+    });
+    
+    // Pan đến vị trí
+    map.setView([lat, lng], 13);
 }
+
+function updateUrlAndReload(lat, lng) {
+    const search = document.querySelector('input[name=search]').value;
+    const distance = '{{ max_distance }}';
+    let url = `?lat=${lat}&lng=${lng}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (distance) url += `&distance=${distance}`;
+    window.history.replaceState({}, '', url);
+    
+    // Reload để cập nhật danh sách cửa hàng theo khoảng cách
+    // window.location.href = url;  // Bỏ comment nếu muốn auto reload
+}
+
+// Tạo marker ban đầu nếu có
+if (USER_LAT !== null) {
+    createUserMarker(USER_LAT, USER_LNG);
+}
+
+/* ════════════════════════════════════���══════════════
+   Click vào bản đồ để đặt vị trí
+   ═══════════════════════════════════════════════════ */
+map.on('click', function(e) {
+    const lat = e.latlng.lat;
+    const lng = e.latlng.lng;
+    createUserMarker(lat, lng);
+    updateUrlAndReload(lat, lng);
+});
 
 /* ═══════════════════════════════════════════════════
    Routing (Leaflet Routing Machine — OSRM public)
@@ -259,7 +324,7 @@ if (USER_LAT !== null) {
 let routingControl = null;
 
 function routeTo(destLat, destLng, storeName) {
-    if (USER_LAT === null) {
+    if (currentLat === null) {
         alert('Vui lòng lấy vị trí hiện tại trước!');
         return;
     }
@@ -275,7 +340,7 @@ function routeTo(destLat, destLng, storeName) {
 
     routingControl = L.Routing.control({
         waypoints: [
-            L.latLng(USER_LAT, USER_LNG),
+            L.latLng(currentLat, currentLng),
             L.latLng(destLat, destLng)
         ],
         router: L.Routing.osrmv1({
@@ -285,16 +350,16 @@ function routeTo(destLat, destLng, storeName) {
         lineOptions: {
             styles: [{ color: '#0d6efd', weight: 5, opacity: 0.85 }]
         },
-        show: false,               // Ẩn panel mặc định của LRM (tự build)
+        show: false,
         addWaypoints: false,
         routeWhileDragging: false,
         fitSelectedRoutes: true,
         showAlternatives: false,
-        createMarker: function() { return null; }   // Dùng marker có sẵn
+        createMarker: function() { return null; }
     })
     .on('routesfound', function(e) {
         const route   = e.routes[0];
-        const dist    = (route.summary.totalDistance / 1000).toFixed(1);   // km
+        const dist    = (route.summary.totalDistance / 1000).toFixed(1);
         const timeMin = Math.round(route.summary.totalTime / 60);
         document.getElementById('routeInfo').innerHTML =
             `<strong>🏪 ${storeName}</strong><br>
@@ -347,17 +412,34 @@ function getMyLocation() {
         function(pos) {
             const lat  = pos.coords.latitude;
             const lng  = pos.coords.longitude;
-            const search   = document.querySelector('input[name=search]').value;
-            const distance = '{{ max_distance }}';
-            let url = `?lat=${lat}&lng=${lng}`;
-            if (search)   url += `&search=${encodeURIComponent(search)}`;
-            if (distance) url += `&distance=${distance}`;
-            window.location.href = url;
+            createUserMarker(lat, lng);
+            updateUrlAndReload(lat, lng);
         },
         function(err) {
             alert('Không thể lấy vị trí: ' + err.message);
         }
     );
+}
+
+/* Đặt vị trí tại tâm bản đồ */
+function setMarkerAtCenter() {
+    const center = map.getCenter();
+    createUserMarker(center.lat, center.lng);
+    updateUrlAndReload(center.lat, center.lng);
+}
+
+/* Xóa vị trí */
+function clearUserLocation() {
+    if (userMarker) {
+        map.removeLayer(userMarker);
+        userMarker = null;
+        currentLat = null;
+        currentLng = null;
+        document.getElementById('hiddenLat').value = '';
+        document.getElementById('hiddenLng').value = '';
+        window.history.replaceState({}, '', window.location.pathname);
+        map.setView([10.7769, 106.7009], 12);
+    }
 }
 
 /* ── Đồng bộ hidden inputs trước khi submit form ── */

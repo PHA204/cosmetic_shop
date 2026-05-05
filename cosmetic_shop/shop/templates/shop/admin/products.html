@@ -15,6 +15,9 @@
     <a href="{% url 'shop:admin_product_create' %}" class="btn btn-primary">
         <i class="bi bi-plus-circle"></i> Thêm sản phẩm
     </a>
+    <a href="{% url 'shop:admin_import_products' %}" class="btn btn-success">
+        <i class="bi bi-file-earmark-excel"></i> Nhập Excel
+    </a>
 </div>
 
 <div class="card">
@@ -49,12 +52,12 @@
                         <td><strong>{{ product.name }}</strong></td>
                         <td class="text-danger fw-bold">{{ product.price|floatformat:0 }}đ</td>
                         <td>
-                            <span class="badge bg-{% if product.stock > 20 %}success{% elif product.stock > 5 %}warning{% else %}danger{% endif %}">
-                                {{ product.stock }}
+                            <span class="badge bg-{% if product.display_stock > 20 %}success{% elif product.display_stock > 5 %}warning{% else %}danger{% endif %}">
+                                {{ product.display_stock }}
                             </span>
                         </td>
                         <td>
-                            {% if product.stock > 0 %}
+                            {% if product.display_stock > 0 %}
                             <span class="badge bg-success">Còn hàng</span>
                             {% else %}
                             <span class="badge bg-danger">Hết hàng</span>

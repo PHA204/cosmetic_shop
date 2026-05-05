@@ -1,5 +1,7 @@
 from django.urls import path
 from . import views
+from . import import_excel as views_excel
+from . import inventory_views
 from django.views.defaults import page_not_found
 app_name = 'shop'
 
@@ -8,6 +10,9 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('products/', views.product_list, name='product_list'),
     path('product/<int:pk>/', views.product_detail, name='product_detail'),
+    
+    # Khách hàng
+    path('my-orders/', views.my_orders, name='my_orders'),
 
     # GIS
     path('stores/', views.store_locator, name='store_locator'),
@@ -22,6 +27,7 @@ urlpatterns = [
     path('cart/', views.cart_view, name='cart'),
     path('checkout/', views.checkout, name='checkout'),
     path('api/cart-items/', views.cart_items_api, name='cart_items_api'),
+    path('api/find-nearest-store/', views.find_nearest_store_api, name='find_nearest_store_api'),
 
     # Admin Dashboard
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
@@ -68,7 +74,18 @@ urlpatterns = [
     path('admin-dashboard/categories/add/', views.admin_category_create, name='admin_category_create'),
     path('admin-dashboard/categories/<int:category_id>/edit/', views.admin_category_edit, name='admin_category_edit'),
     path('admin-dashboard/categories/<int:category_id>/delete/', views.admin_category_delete, name='admin_category_delete'),
-    
+
+    # Admin — Import từ Excel
+    path('admin-dashboard/products/import/', views_excel.admin_import_products, name='admin_import_products'),
+    path('admin-dashboard/products/import/template/', views_excel.admin_download_template, name='admin_download_template'),
+
+    # Admin — Inventory (Tồn kho theo chi nhánh)
+    path('admin-dashboard/inventory/', inventory_views.admin_inventory, name='admin_inventory'),
+    path('admin-dashboard/inventory/<int:store_id>/', inventory_views.admin_inventory_detail, name='admin_inventory_detail'),
+
+    # Admin — Trang giới thiệu
+    path('admin-dashboard/about-page/', views.admin_about_page, name='admin_about_page'),
+
     # 404
     
 ]

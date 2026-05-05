@@ -40,6 +40,10 @@
                                    class="btn btn-sm btn-outline-secondary" target="_blank" title="Xem bản đồ">
                                     <i class="bi bi-map"></i>
                                 </a>
+                                <a href="{% url 'shop:admin_inventory_detail' store.id %}"
+                                   class="btn btn-sm btn-outline-success" title="Quản lý tồn kho">
+                                    <i class="bi bi-boxes"></i>
+                                </a>
                                 <a href="{% url 'shop:admin_store_delete' store.id %}"
                                    class="btn btn-sm btn-outline-danger" title="Xóa">
                                     <i class="bi bi-trash"></i>

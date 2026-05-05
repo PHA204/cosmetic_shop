@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404, redirect
+﻿from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
@@ -6,19 +6,16 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Sum, Q
 from django.db import transaction
 from django.utils import timezone
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.conf import settings
 import urllib.request
 import urllib.error
-from .models import Product, Store, Order, OrderItem, Shipper, Category, ProductImage
+import json
+from .models import Product, Store, Order, OrderItem, Shipper, Category, ProductImage, StoreProduct, AboutPage, AboutValue, AboutGallery
 from math import radians, sin, cos, sqrt, atan2
 from datetime import date, timedelta
 from django.db.models import Sum, Count, Avg
 from django.db.models.functions import TruncDay, TruncWeek, TruncMonth
-import csv, json
-from django.http import HttpResponse
-import qrcode
-import base64
 from io import BytesIO
 
 def calculate_distance(lat1, lon1, lat2, lon2):
@@ -43,19 +40,32 @@ def home(request):
 
 
 def product_list(request):
-    products = Product.objects.all()
-    
+    products = Product.objects.annotate(
+        total_stock=Sum('inventory__stock')
+    ).filter(total_stock__gt=0)  # Chỉ hiện còn hàng
+
     return render(request, 'shop/product_list.html', {'products': products})
 
 
 def product_detail(request, pk):
-    product          = get_object_or_404(Product, pk=pk)
+    product = get_object_or_404(
+        Product.objects.annotate(total_stock=Sum('inventory__stock')),
+        pk=pk
+    )
     gallery          = product.images.all().order_by('order')
     related_products = Product.objects.exclude(pk=pk).order_by('?')[:4]
+
+    # Lấy danh sách chi nhánh còn hàng
+    store_inventory = StoreProduct.objects.filter(
+        product=product,
+        stock__gt=0
+    ).select_related('store').order_by('store__name')
+
     return render(request, 'shop/product_detail.html', {
         'product':          product,
         'gallery':          gallery,
         'related_products': related_products,
+        'store_inventory':  store_inventory,
     })
 
 
@@ -156,6 +166,29 @@ def cart_view(request):
     return render(request, 'shop/cart.html')
 
 
+# ══════════════════════════════════════════════
+#  TRANG KHÁCH HÀNG
+# ══════════════════════════════════════════════
+
+@login_required
+def my_orders(request):
+    """Trang "Đơn hàng của tôi" - Hiển thị danh sách đơn hàng của user đang đăng nhập"""
+    status_filter = request.GET.get('status', 'all')
+    
+    orders = Order.objects.filter(user=request.user).order_by('-created_at')
+    
+    if status_filter == 'delivered':
+        orders = orders.filter(status='delivered')
+        tab_active = 'delivered'
+    else:
+        tab_active = 'all'
+    
+    return render(request, 'shop/my_orders.html', {
+        'orders': orders,
+        'tab_active': tab_active,
+    })
+
+
 def cart_items_api(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -167,16 +200,19 @@ def cart_items_api(request):
     items, stock_errors = [], []
     for product_id, quantity in cart.items():
         try:
-            product  = Product.objects.get(id=int(product_id))
+            product  = Product.objects.annotate(
+                total_stock=Sum('inventory__stock')
+            ).get(id=int(product_id))
             quantity = int(quantity)
-            if quantity > product.stock:
+            available_stock = product.total_stock or 0
+            if quantity > available_stock:
                 stock_errors.append({
                     'product_id': product.id,
                     'product_name': product.name,
                     'requested': quantity,
-                    'available': product.stock,
+                    'available': available_stock,
                 })
-                quantity = product.stock
+                quantity = available_stock
             if quantity > 0:
                 items.append({
                     'id': product.id,
@@ -184,12 +220,74 @@ def cart_items_api(request):
                     'price': float(product.price),
                     'quantity': quantity,
                     'subtotal': float(product.price) * quantity,
-                    'stock': product.stock,
+                    'stock': available_stock,
                     'image': product.image.url if product.image else None,
                 })
         except (Product.DoesNotExist, ValueError, TypeError):
             continue
     return JsonResponse({'items': items, 'stock_errors': stock_errors})
+
+
+def find_nearest_store_api(request):
+    """API: Tìm store gần nhất có đủ hàng dựa trên tọa độ giao hàng"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        delivery_lat = float(data.get('lat'))
+        delivery_lng = float(data.get('lng'))
+        cart = data.get('cart', {})
+    except (json.JSONDecodeError, ValueError, TypeError):
+        return JsonResponse({'error': 'Invalid data'}, status=400)
+    
+    if not cart:
+        return JsonResponse({'error': 'Cart is empty'}, status=400)
+    
+    product_ids = [int(pid) for pid in cart.keys()]
+    stores = Store.objects.all()
+    valid_stores = []
+    
+    for store in stores:
+        store_inventory = StoreProduct.objects.filter(
+            store=store,
+            product_id__in=product_ids
+        )
+        stock_map = {sp.product_id: sp.stock for sp in store_inventory}
+        
+        has_all = True
+        for pid, qty in cart.items():
+            if stock_map.get(int(pid), 0) < int(qty):
+                has_all = False
+                break
+        
+        if has_all:
+            distance = calculate_distance(
+                delivery_lat, delivery_lng,
+                store.latitude, store.longitude
+            )
+            valid_stores.append({
+                'id': store.id,
+                'name': store.name,
+                'address': store.address,
+                'distance': round(distance, 2)
+            })
+    
+    if not valid_stores:
+        return JsonResponse({
+            'found': False,
+            'message': 'Không có cửa hàng nào có đủ hàng gần vị trí của bạn'
+        })
+    
+    # Sắp xếp theo khoảng cách và lấy store gần nhất
+    valid_stores.sort(key=lambda x: x['distance'])
+    nearest = valid_stores[0]
+    
+    return JsonResponse({
+        'found': True,
+        'store': nearest,
+        'all_stores': valid_stores
+    })
 
 
 def checkout(request):
@@ -201,6 +299,60 @@ def checkout(request):
 
         if not cart:
             messages.error(request, 'Giỏ hàng trống!')
+            return redirect('shop:cart')
+
+        store_id = request.POST.get('store_id')
+        delivery_lat = request.POST.get('delivery_lat')
+        delivery_lng = request.POST.get('delivery_lng')
+
+        # Nếu có tọa độ giao hàng, tự động tìm store gần nhất có đủ hàng
+        if delivery_lat and delivery_lng and not store_id:
+            try:
+                delivery_lat = float(delivery_lat)
+                delivery_lng = float(delivery_lng)
+                product_ids = [int(pid) for pid in cart]
+                
+                # Tìm các store có tất cả sản phẩm trong cart
+                stores = Store.objects.all()
+                valid_stores = []
+                
+                for store in stores:
+                    store_inventory = StoreProduct.objects.filter(
+                        store=store,
+                        product_id__in=product_ids
+                    )
+                    
+                    # Map product_id -> stock
+                    stock_map = {sp.product_id: sp.stock for sp in store_inventory}
+                    
+                    # Kiểm tra đủ hàng cho tất cả sản phẩm
+                    has_all = True
+                    for pid, qty in cart.items():
+                        if stock_map.get(int(pid), 0) < int(qty):
+                            has_all = False
+                            break
+                    
+                    if has_all:
+                        # Tính khoảng cách
+                        distance = calculate_distance(
+                            delivery_lat, delivery_lng,
+                            store.latitude, store.longitude
+                        )
+                        valid_stores.append((store, distance))
+                
+                # Sắp xếp theo khoảng cách và chọn store gần nhất
+                if valid_stores:
+                    valid_stores.sort(key=lambda x: x[1])
+                    store_id = valid_stores[0][0].id
+                    messages.info(request, f'Đã chọn cửa hàng gần nhất: {valid_stores[0][0].name}')
+                else:
+                    messages.error(request, 'Không có cửa hàng nào có đủ hàng cho đơn hàng này!')
+                    return redirect('shop:cart')
+            except (ValueError, TypeError):
+                pass
+
+        if not store_id:
+            messages.error(request, 'Vui lòng chọn cửa hàng lấy hàng!')
             return redirect('shop:cart')
 
         try:
@@ -216,16 +368,11 @@ def checkout(request):
                     quantity = int(qty)
                     if not product or quantity <= 0:
                         continue
-                    if quantity > product.stock:
-                        errors.append(
-                            f'"{product.name}": yêu cầu {quantity}, chỉ còn {product.stock}.'
-                        )
-                    else:
-                        validated.append((product, quantity))
+                    validated.append((product, quantity))
 
                 if errors:
                     for e in errors:
-                        messages.error(request, f'Không đủ tồn kho — {e}')
+                        messages.error(request, f'Không đủ tồn kho - {e}')
                     raise ValueError('stock_error')
 
                 if not validated:
@@ -233,10 +380,14 @@ def checkout(request):
                     raise ValueError('no_items')
 
                 order = Order.objects.create(
+                    user=request.user if request.user.is_authenticated else None,
                     customer_name=request.POST.get('name', '').strip(),
                     phone=request.POST.get('phone', '').strip(),
                     address=request.POST.get('address', '').strip(),
+                    latitude=float(delivery_lat) if delivery_lat else None,
+                    longitude=float(delivery_lng) if delivery_lng else None,
                     total=0,
+                    store_id=store_id,
                 )
                 total = 0
                 for product, quantity in validated:
@@ -245,8 +396,6 @@ def checkout(request):
                         quantity=quantity, price=product.price,
                     )
                     total += product.price * quantity
-                    product.stock -= quantity
-                    product.save(update_fields=['stock'])
 
                 order.total = total
                 order.save(update_fields=['total'])
@@ -259,7 +408,7 @@ def checkout(request):
          return redirect('shop:momo_payment', order_id=order.id)
         return render(request, 'shop/order_success.html', {'order': order})
 
-    return render(request, 'shop/checkout.html')
+    return render(request, 'shop/checkout.html', {'stores': Store.objects.all()})
 
 
 # ══════════════════════════════════════════════
@@ -280,7 +429,9 @@ def admin_dashboard(request):
         'confirmed_orders': Order.objects.filter(status='confirmed').count(),
         'shipping_orders':  Order.objects.filter(status='shipping').count(),
         'delivered_orders': Order.objects.filter(status='delivered').count(),
-        'low_stock':        Product.objects.filter(stock__lt=10).order_by('stock')[:5],
+        'low_stock':        Product.objects.annotate(
+            total_stock=Sum('inventory__stock')
+        ).filter(total_stock__lt=10).order_by('total_stock')[:5],
         'recent_orders':    Order.objects.order_by('-created_at')[:5],
     }
     return render(request, 'shop/admin/dashboard.html', context)
@@ -292,12 +443,19 @@ def admin_dashboard(request):
 @user_passes_test(is_staff)
 def admin_products(request):
     search   = request.GET.get('search', '').strip()
-    products = Product.objects.all().order_by('-id')
-    
+    products = Product.objects.all().annotate(
+        total_stock=Sum('inventory__stock')
+    ).order_by('-id')
+
     if search:
         products = products.filter(
             Q(name__icontains=search) | Q(description__icontains=search)
         )
+
+    # Tính tổng stock cho từng sản phẩm
+    for p in products:
+        p.display_stock = p.total_stock or 0
+
     return render(request, 'shop/admin/products.html', {
         'products': products, 'search': search
     })
@@ -307,31 +465,30 @@ def admin_products(request):
 @user_passes_test(is_staff)
 def admin_product_edit(request, product_id):
     product = get_object_or_404(Product, id=product_id)
- 
+
     if request.method == 'POST':
         product.name        = request.POST.get('name', '').strip()
         product.description = request.POST.get('description', '').strip()
         try:
             product.price = int(request.POST.get('price', 0))
-            product.stock = int(request.POST.get('stock', 0))
         except (ValueError, TypeError):
-            messages.error(request, 'Giá và tồn kho phải là số nguyên.')
+            messages.error(request, 'Giá phải là số nguyên.')
             return render(request, 'shop/admin/product_form.html', {
                 'product': product, 'action': 'Sửa',
                 'categories': Category.objects.all(),
                 'gallery': product.images.all(),
             })
- 
+
         product.category_id = request.POST.get('category') or None
         if request.FILES.get('image'):
             product.image = request.FILES['image']
         product.save()
- 
+
         # Xoá ảnh gallery được tick
         delete_ids = request.POST.getlist('delete_image')
         if delete_ids:
             ProductImage.objects.filter(id__in=delete_ids, product=product).delete()
- 
+
         # Thêm ảnh gallery mới (tối đa 3 ảnh tổng cộng)
         new_images    = request.FILES.getlist('gallery_images')
         current_count = product.images.count()
@@ -342,17 +499,17 @@ def admin_product_edit(request, product_id):
                 product=product, image=img,
                 order=current_count + i, alt=product.name,
             )
- 
+
         messages.success(request, f'Đã cập nhật sản phẩm "{product.name}".')
         return redirect('shop:admin_products')
- 
+
     return render(request, 'shop/admin/product_form.html', {
         'product':    product,
         'action':     'Sửa',
         'categories': Category.objects.all(),
         'gallery':    product.images.all(),
     })
- 
+
 @login_required
 @user_passes_test(is_staff)
 def admin_product_create(request):
@@ -360,36 +517,35 @@ def admin_product_create(request):
         name        = request.POST.get('name', '').strip()
         price       = request.POST.get('price', '0')
         description = request.POST.get('description', '').strip()
-        stock       = request.POST.get('stock', '0')
         image       = request.FILES.get('image')
         category_id = request.POST.get('category') or None
- 
+
         if not name:
             messages.error(request, 'Tên sản phẩm không được để trống.')
             return render(request, 'shop/admin/product_form.html', {
                 'action': 'Thêm', 'categories': Category.objects.all(),
             })
- 
+
         try:
             product = Product(
                 name=name, price=int(price), description=description,
-                stock=int(stock), category_id=category_id,
+                category_id=category_id,
             )
             if image:
                 product.image = image
             product.save()
- 
+
             # Lưu ảnh gallery (tối đa 3)
             for i, img in enumerate(request.FILES.getlist('gallery_images')[:3]):
                 ProductImage.objects.create(
                     product=product, image=img, order=i, alt=name,
                 )
- 
+
             messages.success(request, f'Đã thêm sản phẩm "{product.name}".')
             return redirect('shop:admin_products')
         except (ValueError, TypeError) as e:
             messages.error(request, f'Dữ liệu không hợp lệ: {e}')
- 
+
     return render(request, 'shop/admin/product_form.html', {
         'action': 'Thêm', 'categories': Category.objects.all(),
     })
@@ -529,25 +685,98 @@ def admin_store_delete(request, store_id):
 def about(request):
     stores   = Store.objects.all()
     products = Product.objects.count()
-    values   = [
-        {'icon': '🌿', 'title': 'Thiên nhiên & Thuần chay',
-         'desc': 'Ưu tiên thành phần thiên nhiên, không thử nghiệm trên động vật, thân thiện với môi trường trong từng sản phẩm.'},
-        {'icon': '💎', 'title': 'Chất lượng & Uy tín',
-         'desc': '100% hàng chính hãng có nguồn gốc rõ ràng, được kiểm định chất lượng nghiêm ngặt trước khi đến tay khách hàng.'},
-        {'icon': '❤️', 'title': 'Tận tâm & Chuyên nghiệp',
-         'desc': 'Đội ngũ tư vấn viên được đào tạo bài bản, luôn lắng nghe và đồng hành cùng khách hàng trên hành trình làm đẹp.'},
-    ]
+    
+    # Lấy hoặc tạo dữ liệu trang giới thiệu
+    about = AboutPage.objects.first()
+    if not about:
+        about = AboutPage.objects.create()
+    
+    # Lấy giá trị cốt lõi từ DB
+    values = list(about.values.all())
+    
     return render(request, 'shop/about.html', {
         'stores': stores,
         'total_products': products,
         'values': values,
+        'about': about,
     })
- 
- 
+
+
+# ══════════════════════════════════════════════
+#  ADMIN — QUẢN LÝ TRANG GIỚI THIỆU
+# ══════════════════════════════════════════════
+
+@login_required
+@user_passes_test(is_staff)
+def admin_about_page(request):
+    """Quản lý nội dung trang giới thiệu"""
+    about = AboutPage.objects.first()
+    if not about:
+        about = AboutPage.objects.create()
+
+    if request.method == 'POST':
+        # Cập nhật các trường
+        about.hero_label = request.POST.get('hero_label', '')
+        about.hero_title = request.POST.get('hero_title', '')
+        about.hero_text = request.POST.get('hero_text', '')
+        about.branches_text = request.POST.get('branches_text', '')
+        about.customers_text = request.POST.get('customers_text', '')
+        about.products_text = request.POST.get('products_text', '')
+        about.rating_text = request.POST.get('rating_text', '')
+        about.story_label = request.POST.get('story_label', '')
+        about.story_title = request.POST.get('story_title', '')
+        about.story_year = request.POST.get('story_year', '')
+        about.story_year_label = request.POST.get('story_year_label', '')
+        about.story_text_1 = request.POST.get('story_text_1', '')
+        about.story_text_2 = request.POST.get('story_text_2', '')
+        about.authentic_text = request.POST.get('authentic_text', '')
+        about.return_text = request.POST.get('return_text', '')
+        about.support_text = request.POST.get('support_text', '')
+        about.values_label = request.POST.get('values_label', '')
+        about.values_title = request.POST.get('values_title', '')
+        about.cta_title = request.POST.get('cta_title', '')
+        about.cta_text = request.POST.get('cta_text', '')
+        
+        # Xử lý ảnh upload
+        if request.FILES.get('hero_image'):
+            about.hero_image = request.FILES['hero_image']
+        if request.FILES.get('story_image'):
+            about.story_image = request.FILES['story_image']
+        
+        about.save()
+        
+        # Cập nhật giá trị cốt lõi
+        # Xóa các giá trị cũ
+        AboutValue.objects.filter(about=about).delete()
+        # Thêm mới
+        value_titles = request.POST.getlist('value_title[]')
+        value_descs = request.POST.getlist('value_desc[]')
+        value_icons = request.POST.getlist('value_icon[]')
+        for i in range(len(value_titles)):
+            if value_titles[i].strip():
+                AboutValue.objects.create(
+                    about=about,
+                    title=value_titles[i],
+                    description=value_descs[i] if i < len(value_descs) else '',
+                    icon=value_icons[i] if i < len(value_icons) else '🌿',
+                    order=i
+                )
+        
+        messages.success(request, 'Đã cập nhật trang giới thiệu!')
+        return redirect('shop:admin_about_page')
+    
+    values = about.values.all()
+    
+    return render(request, 'shop/admin/about_page.html', {
+        'about': about,
+        'values': values
+    })
+
+
 # ══════════════════════════════════════════════
 #  THANH TOÁN MOMO
 # ══════════════════════════════════════════════
- 
+
 def momo_payment(request, order_id):
     order = get_object_or_404(Order, id=order_id)
     if order.status != 'pending':
@@ -560,7 +789,7 @@ def momo_payment(request, order_id):
     transfer_content = f'DONHANG{order.id}'
     amount = int(order.total)
 
-    # Deep link MoMo — mở thẳng app và điền sẵn thông tin
+    # Deep link MoMo - mở thẳng app và điền sẵn thông tin
     momo_deeplink = (
         f'momo://app?action=payWithApp'
         f'&isScanQR=true'
@@ -596,7 +825,7 @@ def momo_payment(request, order_id):
         'transfer_content':  transfer_content,
         'amount':            amount,
     })
- 
+
 def momo_confirm(request, order_id):
     """
     Xử lý sau khi khách bấm 'Tôi đã thanh toán xong'.
@@ -605,19 +834,19 @@ def momo_confirm(request, order_id):
     """
     if request.method != 'POST':
         return redirect('shop:momo_payment', order_id=order_id)
- 
+
     order = get_object_or_404(Order, id=order_id)
     # TODO: Tích hợp MoMo IPN callback để verify thực tế
     order.status = 'confirmed'
     order.save(update_fields=['status'])
     messages.success(request, f'Thanh toán MoMo đơn #{order_id} đã được ghi nhận!')
     return render(request, 'shop/order_success.html', {'order': order})
- 
- 
+
+
 # ══════════════════════════════════════════════
 #  BÁO CÁO DOANH THU (Admin)
 # ══════════════════════════════════════════════
- 
+
 @login_required
 @user_passes_test(is_staff)
 def admin_revenue(request):
@@ -625,26 +854,36 @@ def admin_revenue(request):
     from django.db.models import Count, Avg
     from django.db.models.functions import TruncDay, TruncWeek, TruncMonth
     import csv
- 
+
     # ── Tham số lọc ──
     today     = date.today()
     from_str  = request.GET.get('from_date', '')
     to_str    = request.GET.get('to_date', '')
     group_by  = request.GET.get('group_by', 'day')
- 
+    store_id  = request.GET.get('store_id', '')
+
     try:
         from_date = date.fromisoformat(from_str) if from_str else today - timedelta(days=29)
     except ValueError:
         from_date = today - timedelta(days=29)
- 
+
     try:
         to_date = date.fromisoformat(to_str) if to_str else today
     except ValueError:
         to_date = today
- 
+
     # ── Queryset cơ sở ──
     qs = Order.objects.filter(created_at__date__gte=from_date, created_at__date__lte=to_date)
- 
+    
+    # Lọc theo chi nhánh nếu có
+    selected_store = None
+    if store_id:
+        try:
+            selected_store = Store.objects.get(id=int(store_id))
+            qs = qs.filter(store=selected_store)
+        except (Store.DoesNotExist, ValueError):
+            pass
+
     # ── Xuất CSV ──
     if request.GET.get('export') == 'csv':
         response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
@@ -656,13 +895,30 @@ def admin_revenue(request):
                              o.get_status_display(), o.created_at.strftime('%d/%m/%Y %H:%M'),
                              float(o.total)])
         return response
- 
+
     # ── KPI ──
     total_revenue   = qs.aggregate(s=Sum('total'))['s'] or 0
     total_orders    = qs.count()
     delivered_orders = qs.filter(status='delivered').count()
     avg_order_value = (total_revenue / total_orders) if total_orders else 0
- 
+
+    # ── KPI theo Store (Chi nhánh) ──
+    store_stats = []
+    for store in Store.objects.all():
+        store_qs = qs.filter(store=store)
+        s_rev = store_qs.aggregate(s=Sum('total'))['s'] or 0
+        s_cnt = store_qs.count()
+        if s_cnt > 0:  # Chỉ hiện chi nhánh có đơn
+            store_stats.append({
+                'name': store.name,
+                'revenue': s_rev,
+                'orders': s_cnt,
+                'avg': s_rev / s_cnt,
+            })
+
+    # Sắp xếp theo doanh thu giảm dần
+    store_stats.sort(key=lambda x: x['revenue'], reverse=True)
+
     # ── Trạng thái breakdown ──
     status_map = {
         'pending':   ('Chờ xác nhận', '#ffc107', '#fff3cd'),
@@ -675,19 +931,19 @@ def admin_revenue(request):
         cnt = qs.filter(status=code).count()
         pct = (cnt / total_orders * 100) if total_orders else 0
         status_breakdown.append({'label': label, 'count': cnt, 'pct': pct, 'color': color})
- 
+
     # ── Nhóm doanh thu theo kỳ ──
     trunc_map = {'day': TruncDay, 'week': TruncWeek, 'month': TruncMonth}
     group_label_map = {'day': 'ngày', 'week': 'tuần', 'month': 'tháng'}
     TruncFn = trunc_map.get(group_by, TruncDay)
- 
+
     grouped = (
         qs.annotate(period=TruncFn('created_at'))
           .values('period')
           .annotate(revenue=Sum('total'), order_count=Count('id'))
           .order_by('period')
     )
- 
+
     revenue_rows = []
     max_rev = float(max((g['revenue'] or 0 for g in grouped), default=1))
     for g in grouped:
@@ -702,12 +958,12 @@ def admin_revenue(request):
             'avg':         rev / cnt if cnt else 0,
             'pct':         rev / max_rev * 100 if max_rev else 0,
         })
- 
+
     # ── Chart data ──
     chart_labels  = [r['period'] for r in revenue_rows]
     chart_revenue = [r['revenue'] for r in revenue_rows]
     chart_orders  = [r['order_count'] for r in revenue_rows]
- 
+
     # ── Top sản phẩm ──
     from django.db.models import F
     top_raw = (
@@ -727,7 +983,7 @@ def admin_revenue(request):
         }
         for p in top_raw
     ]
- 
+
     import json
     context = {
         'from_date':        from_date.isoformat(),
@@ -742,6 +998,9 @@ def admin_revenue(request):
         'revenue_rows':     revenue_rows,
         'top_products':     top_products,
         'recent_orders':    qs.order_by('-created_at')[:8],
+        'store_stats':      store_stats,
+        'stores':           Store.objects.all(),
+        'selected_store':   selected_store,
         # JSON for charts
         'chart_labels':     json.dumps(chart_labels),
         'chart_revenue':    json.dumps(chart_revenue),
@@ -751,22 +1010,22 @@ def admin_revenue(request):
         'status_colors':    json.dumps([s['color'] for s in status_breakdown]),
     }
     return render(request, 'shop/admin/revenue_report.html', context)
- 
+
 @login_required
 @user_passes_test(is_staff)
 def admin_shippers(request):
     search = request.GET.get('search', '').strip()
     status = request.GET.get('status', '').strip()
- 
+
     shippers = Shipper.objects.all()
- 
+
     if search:
         shippers = shippers.filter(
             Q(name__icontains=search) | Q(phone__icontains=search) | Q(area__icontains=search)
         )
     if status:
         shippers = shippers.filter(status=status)
- 
+
     # Thống kê nhanh
     from django.db.models import Count
     stats = {
@@ -775,26 +1034,26 @@ def admin_shippers(request):
         'busy':     Shipper.objects.filter(status='busy').count(),
         'inactive': Shipper.objects.filter(status='inactive').count(),
     }
- 
+
     return render(request, 'shop/admin/shippers.html', {
         'shippers':       shippers,
         'search':         search,
         'current_status': status,
         'stats':          stats,
     })
- 
- 
+
+
 @login_required
 @user_passes_test(is_staff)
 def admin_shipper_detail(request, shipper_id):
     shipper = get_object_or_404(Shipper, id=shipper_id)
- 
+
     # Đơn hàng được giao cho shipper này
     order_status = request.GET.get('order_status', '')
     orders = shipper.orders.all().order_by('-created_at')
     if order_status:
         orders = orders.filter(status=order_status)
- 
+
     # Thống kê shipper
     from django.db.models import Sum, Count
     stats = shipper.orders.aggregate(
@@ -805,15 +1064,15 @@ def admin_shipper_detail(request, shipper_id):
     stats['active_orders'] = shipper.orders.filter(
         status__in=['confirmed', 'shipping']
     ).count()
- 
+
     return render(request, 'shop/admin/shipper_detail.html', {
         'shipper':        shipper,
         'orders':         orders,
         'stats':          stats,
         'order_status':   order_status,
     })
- 
- 
+
+
 @login_required
 @user_passes_test(is_staff)
 def admin_shipper_create(request):
@@ -826,11 +1085,11 @@ def admin_shipper_create(request):
         status  = request.POST.get('status', 'active')
         note    = request.POST.get('note', '').strip()
         avatar  = request.FILES.get('avatar')
- 
+
         if not name or not phone:
             messages.error(request, 'Họ tên và số điện thoại không được để trống.')
             return render(request, 'shop/admin/shipper_form.html', {'action': 'Thêm'})
- 
+
         shipper = Shipper(
             name=name, phone=phone, email=email,
             vehicle=vehicle, area=area, status=status, note=note,
@@ -840,18 +1099,18 @@ def admin_shipper_create(request):
         shipper.save()
         messages.success(request, f'Đã thêm shipper "{name}".')
         return redirect('shop:admin_shippers')
- 
+
     return render(request, 'shop/admin/shipper_form.html', {
         'action': 'Thêm',
         'status_choices': Shipper.STATUS_CHOICES,
     })
- 
- 
+
+
 @login_required
 @user_passes_test(is_staff)
 def admin_shipper_edit(request, shipper_id):
     shipper = get_object_or_404(Shipper, id=shipper_id)
- 
+
     if request.method == 'POST':
         shipper.name    = request.POST.get('name', '').strip()
         shipper.phone   = request.POST.get('phone', '').strip()
@@ -865,14 +1124,14 @@ def admin_shipper_edit(request, shipper_id):
         shipper.save()
         messages.success(request, f'Đã cập nhật shipper "{shipper.name}".')
         return redirect('shop:admin_shippers')
- 
+
     return render(request, 'shop/admin/shipper_form.html', {
         'shipper':        shipper,
         'action':         'Sửa',
         'status_choices': Shipper.STATUS_CHOICES,
     })
- 
- 
+
+
 @login_required
 @user_passes_test(is_staff)
 def admin_shipper_delete(request, shipper_id):
@@ -887,14 +1146,14 @@ def admin_shipper_delete(request, shipper_id):
         'object_type': 'shipper',
         'cancel_url':  'shop:admin_shippers',
     })
- 
- 
+
+
 @login_required
 @user_passes_test(is_staff)
 def admin_assign_shipper(request, order_id):
     """Gán hoặc thay đổi shipper cho một đơn hàng."""
     order = get_object_or_404(Order, id=order_id)
- 
+
     if request.method == 'POST':
         shipper_id = request.POST.get('shipper_id')
         if shipper_id:
@@ -912,18 +1171,18 @@ def admin_assign_shipper(request, order_id):
             order.shipper = None
             order.save(update_fields=['shipper'])
             messages.info(request, f'Đã bỏ gán shipper khỏi đơn #{order.id}.')
- 
+
         # Redirect về trang trước (detail order hoặc danh sách)
         next_url = request.POST.get('next', '')
         if next_url:
             return redirect(next_url)
         return redirect('shop:admin_order_update', order_id=order_id)
- 
-    # GET — hiển thị form chọn shipper
+
+    # GET - hiển thị form chọn shipper
     available_shippers = Shipper.objects.filter(
         status__in=['active', 'busy']
     ).order_by('name')
- 
+
     return render(request, 'shop/admin/assign_shipper.html', {
         'order':               order,
         'available_shippers':  available_shippers,
@@ -946,34 +1205,36 @@ def product_list(request):
     price_max  = request.GET.get('price_max', '').strip()
     sort       = request.GET.get('sort', 'default')
     in_stock   = request.GET.get('in_stock', '')
- 
+
     # ── Base queryset ──
     products = Product.objects.select_related('category').all()
- 
+
     # ── Lọc ──
     if q:
         products = products.filter(
             Q(name__icontains=q) | Q(description__icontains=q)
         )
- 
+
     if category:
         products = products.filter(category__slug=category)
- 
+
     if price_min:
         try:
             products = products.filter(price__gte=float(price_min))
         except ValueError:
             pass
- 
+
     if price_max:
         try:
             products = products.filter(price__lte=float(price_max))
         except ValueError:
             pass
- 
+
     if in_stock:
-        products = products.filter(stock__gt=0)
- 
+        products = products.annotate(
+            total_stock=Sum('inventory__stock')
+        ).filter(total_stock__gt=0)
+
     # ── Sắp xếp ──
     sort_map = {
         'price_asc':  'price',
@@ -983,18 +1244,18 @@ def product_list(request):
         'default':    '-id',
     }
     products = products.order_by(sort_map.get(sort, '-id'))
- 
+
     # ── Danh mục cho sidebar ──
     categories = Category.objects.all()
- 
+
     # ── Khoảng giá cho slider (dùng min/max thực tế) ──
     from django.db.models import Min, Max
     price_range = Product.objects.aggregate(
         min_price=Min('price'), max_price=Max('price')
     )
- 
+
     total = products.count()
- 
+
     return render(request, 'shop/product_list.html', {
         'products':    products,
         'categories':  categories,
@@ -1007,8 +1268,8 @@ def product_list(request):
         'total':       total,
         'price_range': price_range,
     })
- 
- 
+
+
 def search_ajax(request):
     """
     API gợi ý tìm kiếm nhanh (AJAX) — trả về JSON tối đa 6 sản phẩm
@@ -1016,30 +1277,32 @@ def search_ajax(request):
     q = request.GET.get('q', '').strip()
     if len(q) < 2:
         return JsonResponse({'results': []})
- 
+
     products = Product.objects.filter(
         Q(name__icontains=q) | Q(description__icontains=q)
-    ).filter(stock__gt=0)[:6]
- 
+    ).annotate(
+        total_stock=Sum('inventory__stock')
+    ).filter(total_stock__gt=0)[:6]
+
     results = [{
         'id':    p.id,
         'name':  p.name,
         'price': float(p.price),
         'image': p.image.url if p.image else None,
         'url':   f'/product/{p.id}/',
-        'stock': p.stock,
+        'stock': p.total_stock or 0,
         'category': p.category.name if p.category else '',
     } for p in products]
- 
+
     return JsonResponse({'results': results, 'total': Product.objects.filter(
         Q(name__icontains=q) | Q(description__icontains=q)
     ).count()})
- 
- 
+
+
 # ══════════════════════════════════════════════════════════════
-#  ADMIN — CATEGORY MANAGEMENT
+#  ADMIN - CATEGORY MANAGEMENT
 # ══════════════════════════════════════════════════════════════
- 
+
 @login_required
 @user_passes_test(is_staff)
 def admin_categories(request):
@@ -1047,8 +1310,8 @@ def admin_categories(request):
     return render(request, 'shop/admin/categories.html', {
         'categories': categories
     })
- 
- 
+
+
 @login_required
 @user_passes_test(is_staff)
 def admin_category_create(request):
@@ -1057,24 +1320,24 @@ def admin_category_create(request):
         icon        = request.POST.get('icon', '✨')
         description = request.POST.get('description', '').strip()
         order       = request.POST.get('order', 0)
- 
+
         if not name:
             messages.error(request, 'Tên danh mục không được để trống.')
             return render(request, 'shop/admin/category_form.html', {'action': 'Thêm'})
- 
+
         cat = Category(name=name, icon=icon, description=description, order=int(order))
         cat.save()
         messages.success(request, f'Đã thêm danh mục "{name}".')
         return redirect('shop:admin_categories')
- 
+
     return render(request, 'shop/admin/category_form.html', {'action': 'Thêm'})
- 
- 
+
+
 @login_required
 @user_passes_test(is_staff)
 def admin_category_edit(request, category_id):
     cat = get_object_or_404(Category, id=category_id)
- 
+
     if request.method == 'POST':
         cat.name        = request.POST.get('name', '').strip()
         cat.icon        = request.POST.get('icon', '✨')
@@ -1088,12 +1351,12 @@ def admin_category_edit(request, category_id):
         cat.save()
         messages.success(request, f'Đã cập nhật danh mục "{cat.name}".')
         return redirect('shop:admin_categories')
- 
+
     return render(request, 'shop/admin/category_form.html', {
         'category': cat, 'action': 'Sửa'
     })
- 
- 
+
+
 @login_required
 @user_passes_test(is_staff)
 def admin_category_delete(request, category_id):
@@ -1107,4 +1370,4 @@ def admin_category_delete(request, category_id):
         'object': cat, 'object_type': 'danh mục',
         'cancel_url': 'shop:admin_categories',
     })
-  
+

@@ -1,0 +1,78 @@
+{% extends 'shop/admin/base.html' %}
+
+{% block page_title %}Tồn kho - {{ store.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">📦 Kho: {{ store.name }}</h2>
+        <p class="text-muted mb-0">{{ store.address }}</p>
+    </div>
+    <a href="{% url 'shop:admin_inventory' %}" class="btn btn-outline-secondary">
+        ← Danh sách kho
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <form method="post">
+            {% csrf_token %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Sản phẩm</th>
+                            <th>Giá</th>
+                            <th>Tồn kho</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td class="text-muted">{{ product.id }}</td>
+                            <td>
+                                <strong>{{ product.name }}</strong>
+                                {% if product.category %}
+                                <br><small class="text-muted">{{ product.category.icon }} {{ product.category.name }}</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-danger">{{ product.price|floatformat:0 }}đ</td>
+                            <td style="width: 120px;">
+                                <input type="number" 
+                                       name="stock_{{ product.id }}" 
+                                       value="{{ product.current_stock }}"
+                                       min="0"
+                                       class="form-control {% if product.current_stock == 0 %}border-danger{% endif %}">
+                            </td>
+                            <td>
+                                {% if product.current_stock == 0 %}
+                                <span class="badge bg-danger">Hết hàng</span>
+                                {% elif product.current_stock < 10 %}
+                                <span class="badge bg-warning text-dark">Sắp hết</span>
+                                {% else %}
+                                <span class="badge bg-success">Còn hàng</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4">
+                                Chưa có sản phẩm nào. 
+                                <a href="{% url 'shop:admin_products' %}">Thêm sản phẩm</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary">
+                    💾 Lưu tất cả
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

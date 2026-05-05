@@ -2,6 +2,15 @@
 
 {% block title %}Thanh toán - Cosmetic Shop{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #deliveryMap { height: 300px; width: 100%; border-radius: 8px; margin-bottom: 10px; }
+    .selected-location { background: #e8f4ff; padding: 10px; border-radius: 8px; margin-bottom: 15px; }
+    .selected-location strong { color: #0d6efd; }
+</style>
+{% endblock %}
+
 {% block content %}
 <h1 class="mb-4"> Thanh toán</h1>
 
@@ -24,8 +33,38 @@
                         <input type="tel" name="phone" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Địa chỉ giao hàng:</label>
-                        <textarea name="address" class="form-control" rows="3" required></textarea>
+                        <label class="form-label fw-bold">📍 Vị trí giao hàng:</label>
+                        <div id="deliveryMap"></div>
+                        <input type="hidden" name="delivery_lat" id="deliveryLat">
+                        <input type="hidden" name="delivery_lng" id="deliveryLng">
+                        <div class="d-flex gap-2 mb-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="getUserLocation()">
+                                📍 Lấy vị trí hiện tại
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setMarkerAtCenter()">
+                                🖱️ Chọn vị trí trên bản đồ
+                            </button>
+                        </div>
+                        <div id="selectedLocation" class="selected-location" style="display:none;">
+                            <small>✅ Đã chọn: <strong id="locationText"></strong></small>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Địa chỉ chi tiết (số nhà, đường...):</label>
+                        <textarea name="address" class="form-control" rows="2" placeholder="VD: 123 Nguyễn Trãi, Quận 1" required></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">🏪 Chi nhánh lấy hàng:</label>
+                        <select name="store_id" id="storeSelect" class="form-select" required>
+                            <option value="">-- Chọn chi nhánh --</option>
+                            {% for store in stores %}
+                            <option value="{{ store.id }}">{{ store.name }} - {{ store.address }}</option>
+                            {% endfor %}
+                        </select>
+                        <div id="storeSuggestion" class="alert alert-info mt-2" style="display:none;">
+                            <small>💡 Hệ thống sẽ tự động chọn cửa hàng gần nhất có hàng khi bạn chọn vị trí giao hàng!</small>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Ghi chú (tùy chọn):</label>
@@ -78,7 +117,120 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+/* ═══════════════════════════════════════════════════
+   BẢN ĐỒ CHỌN VỊ TRÍ GIAO HÀNG
+   ═══════════════════════════════════════════════════ */
+let map, userMarker;
+const DEFAULT_CENTER = [10.7769, 106.7009]; // TP.HCM
+
+function initMap() {
+    map = L.map('deliveryMap').setView(DEFAULT_CENTER, 12);
+    
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '© OpenStreetMap © CARTO'
+    }).addTo(map);
+    
+    // Click vào bản đồ để chọn vị trí
+    map.on('click', function(e) {
+        setMarker(e.latlng.lat, e.latlng.lng);
+    });
+}
+
+function setMarker(lat, lng) {
+    if (userMarker) map.removeLayer(userMarker);
+    
+    userMarker = L.marker([lat, lng], { draggable: true }).addTo(map);
+    document.getElementById('deliveryLat').value = lat;
+    document.getElementById('deliveryLng').value = lng;
+    
+    const locDiv = document.getElementById('selectedLocation');
+    const locText = document.getElementById('locationText');
+    locDiv.style.display = 'block';
+    locText.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    
+    // Auto fill address (reverse geocode)
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.display_name) {
+                document.querySelector('textarea[name="address"]').value = data.display_name;
+            }
+        })
+        .catch(() => {});
+    
+    // Tìm store gần nhất có hàng
+    findNearestStore(lat, lng);
+    
+    userMarker.on('dragend', function(e) {
+        const pos = e.target.getLatLng();
+        setMarker(pos.lat, pos.lng);
+    });
+}
+
+async function findNearestStore(lat, lng) {
+    const cart = JSON.parse(localStorage.getItem('cart') || '{}');
+    if (Object.keys(cart).length === 0) return;
+    
+    const storeSelect = document.getElementById('storeSelect');
+    const suggestionDiv = document.getElementById('storeSuggestion');
+    
+    try {
+        const res = await fetch('/api/find-nearest-store/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({ lat, lng, cart })
+        });
+        const data = await res.json();
+        
+        if (data.found && data.store) {
+            storeSelect.value = data.store.id;
+            suggestionDiv.innerHTML = 
+                `<small>✅ Tự động chọn <strong>${data.store.name}</strong> (cách ${data.store.distance}km) - cửa hàng gần nhất có đủ hàng!</small>`;
+            suggestionDiv.style.display = 'block';
+            suggestionDiv.className = 'alert alert-success mt-2';
+        } else {
+            suggestionDiv.innerHTML = `<small class="text-danger">⚠️ ${data.message}</small>`;
+            suggestionDiv.style.display = 'block';
+            suggestionDiv.className = 'alert alert-warning mt-2';
+        }
+    } catch (err) {
+        console.error('Lỗi tìm store:', err);
+    }
+}
+
+function getUserLocation() {
+    if (!navigator.geolocation) {
+        alert('Trình duyệt không hỗ trợ định vị!');
+        return;
+    }
+    navigator.geolocation.getCurrentPosition(
+        function(pos) {
+            setMarker(pos.coords.latitude, pos.coords.longitude);
+            map.setView([pos.coords.latitude, pos.coords.longitude], 14);
+        },
+        function(err) { alert('Không thể lấy vị trí: ' + err.message); }
+    );
+}
+
+function setMarkerAtCenter() {
+    const center = map.getCenter();
+    setMarker(center.lat, center.lng);
+}
+
+// Khởi tạo bản đồ khi trang tải xong
+document.addEventListener('DOMContentLoaded', function() {
+    initMap();
+    loadOrderSummary();
+});
+
+/* ═══════════════════════════════════════════════════
+   GIỎ HÀNG & THÔNG TIN ĐƠN
+   ═══════════════════════════════════════════════════ */
 function formatPrice(n) {
     return new Intl.NumberFormat('vi-VN').format(Math.round(n)) + 'đ';
 }

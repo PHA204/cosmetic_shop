@@ -1,4 +1,4 @@
-{% extends 'shop/base.html' %}
+﻿{% extends 'shop/base.html' %}
 
 {% block title %}
   {% if q %}Kết quả "{{ q }}"{% elif category %}{{ category }}{% else %}Tất cả sản phẩm{% endif %} — Cosmetic Shop
@@ -489,9 +489,9 @@
             </div>
             {% endif %}
 
-            {% if product.stock == 0 %}
+            {% if product.total_stock == 0 %}
             <span class="pc-badge out">Hết hàng</span>
-            {% elif product.stock <= 5 %}
+            {% elif product.total_stock <= 5 %}
             <span class="pc-badge low">Sắp hết</span>
             {% endif %}
 
@@ -506,8 +506,8 @@
               <div class="pc-desc">{{ product.description|truncatewords:12 }}</div>
               <div class="pc-price">{{ product.price|floatformat:0 }}đ</div>
               <div class="pc-stock">
-                {% if product.stock > 10 %}Còn {{ product.stock }} sản phẩm
-                {% elif product.stock > 0 %}Còn {{ product.stock }} sản phẩm — sắp hết
+                {% if product.total_stock > 10 %}Còn {{ product.total_stock }} sản phẩm
+                {% elif product.total_stock > 0 %}Còn {{ product.total_stock }} sản phẩm — sắp hết
                 {% else %}Hết hàng{% endif %}
               </div>
             </div>

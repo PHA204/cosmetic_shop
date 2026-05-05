@@ -1,4 +1,4 @@
-{% extends 'shop/base.html' %}
+﻿{% extends 'shop/base.html' %}
 {% block title %}{{ product.name }} - Cosmetic Shop{% endblock %}
 
 {% block extra_css %}
@@ -117,11 +117,34 @@
     <h2 class="fw-bold mb-2">{{ product.name }}</h2>
     <h3 class="text-danger mb-3">{{ product.price|floatformat:0 }}đ</h3>
 
+    <!-- Tình trạng tại các chi nhánh -->
+    {% if store_inventory %}
+    <div class="mb-3 p-3 bg-light rounded">
+      <h6 class="mb-3">📍 Tình trạng tại các chi nhánh</h6>
+      <div class="d-flex flex-wrap gap-2">
+        {% for inv in store_inventory %}
+        <div class="card store-card" style="min-width: 140px;">
+          <div class="card-body py-2 px-3">
+            <div class="fw-bold" style="font-size: 0.9rem;">{{ inv.store.name }}</div>
+            <div class="text-{% if inv.stock > 0 %}success{% else %}danger{% endif %} small">
+              {% if inv.stock > 0 %}
+                ✅ Còn {{ inv.stock }} sản phẩm
+              {% else %}
+                ❌ Hết hàng
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
     <div class="mb-3">
-      {% if product.stock > 10 %}
-        <span class="badge bg-success fs-6">Còn hàng ({{ product.stock }} sản phẩm)</span>
-      {% elif product.stock > 0 %}
-        <span class="badge bg-warning text-dark fs-6">Sắp hết (còn {{ product.stock }})</span>
+      {% if product.total_stock > 10 %}
+        <span class="badge bg-success fs-6">Còn hàng ({{ product.total_stock }} sản phẩm)</span>
+      {% elif product.total_stock > 0 %}
+        <span class="badge bg-warning text-dark fs-6">Sắp hết (còn {{ product.total_stock }})</span>
       {% else %}
         <span class="badge bg-danger fs-6">Hết hàng</span>
       {% endif %}
@@ -133,7 +156,7 @@
       <p class="text-muted">{{ product.description|linebreaks }}</p>
     </div>
 
-    {% if product.stock > 0 %}
+    {% if product.total_stock > 0 %}
     <div class="mb-3 d-flex align-items-center gap-3">
       <label class="form-label mb-0 fw-semibold">Số lượng:</label>
       <div class="input-group" style="width:140px;">
@@ -143,14 +166,14 @@
                id="qtyDisplay" value="1" readonly>
         <button class="btn btn-outline-secondary" type="button"
                 onclick="changeQty(1)" id="qtyPlus"
-                {% if product.stock <= 1 %}disabled{% endif %}>+</button>
+                {% if product.total_stock <= 1 %}disabled{% endif %}>+</button>
       </div>
-      <small class="text-muted">Tối đa {{ product.stock }}</small>
+      <small class="text-muted">Tối đa {{ product.total_stock }}</small>
     </div>
 
     <div class="d-grid gap-2 mb-3">
       <button class="btn btn-success btn-lg"
-              onclick="addToCart({{ product.id }},{{ product.stock }})">
+              onclick="addToCart({{ product.id }},{{ product.total_stock }})">
         🛒 Thêm vào giỏ hàng
       </button>
       <a href="{% url 'shop:product_list' %}" class="btn btn-outline-secondary">
@@ -290,7 +313,7 @@ document.addEventListener('keydown', e => {
 
 // ── Số lượng ──
 let qty = 1;
-const maxStock = {{ product.stock|default:0 }};
+const maxStock = {{ product.total_stock|default:0 }};
 function changeQty(d) {
   qty = Math.min(Math.max(1, qty + d), maxStock);
   document.getElementById('qtyDisplay').value = qty;

@@ -85,6 +85,15 @@
         <option value="month" {% if group_by == 'month' %}selected{% endif %}>Tháng</option>
       </select>
     </div>
+    <div class="d-flex align-items-center gap-2">
+      <label class="form-label mb-0 fw-semibold text-muted" style="font-size:.85rem;">Chi nhánh</label>
+      <select name="store_id" class="form-select form-select-sm" style="width:180px;">
+        <option value="">Tất cả chi nhánh</option>
+        {% for store in stores %}
+        <option value="{{ store.id }}" {% if selected_store.id == store.id %}selected{% endif %}>{{ store.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
     <button class="btn btn-primary btn-sm">🔍 Lọc</button>
     <a href="{% url 'shop:admin_revenue' %}" class="btn btn-outline-secondary btn-sm">↺ Đặt lại</a>
   </form>
@@ -103,7 +112,9 @@
       <div class="d-flex justify-content-between">
         <div>
           <div class="kpi-val">{{ total_revenue|floatformat:0 }}đ</div>
-          <div class="kpi-lbl">Tổng doanh thu</div>
+          <div class="kpi-lbl">
+            {% if selected_store %}Doanh thu - {{ selected_store.name }}{% else %}Tổng doanh thu{% endif %}
+          </div>
         </div>
         <div class="kpi-icon"></div>
       </div>
@@ -143,6 +154,45 @@
     </div>
   </div>
 </div>
+
+<!-- ── STORE STATS (chỉ hiện khi xem tất cả) ── -->
+{% if store_stats and not selected_store %}
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <div class="chart-card">
+      <h6>📊 Doanh thu theo Chi nhánh</h6>
+      <hr class="section-divider">
+      <table class="table table-rank mb-0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Chi nhánh</th>
+            <th class="text-end">Doanh thu</th>
+            <th class="text-end">Số đơn</th>
+            <th class="text-end">Giá trị TB</th>
+            <th class="text-end">Tỷ trọng</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for store in store_stats %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td><strong>{{ store.name }}</strong></td>
+            <td class="text-end text-danger fw-bold">{{ store.revenue|floatformat:0 }}đ</td>
+            <td class="text-end">{{ store.orders }}</td>
+            <td class="text-end text-muted">{{ store.avg|floatformat:0 }}đ</td>
+            <td class="text-end">
+              {% widthratio store.revenue total_revenue 100 as pct %}
+              <span class="badge bg-success">{{ pct|floatformat:1 }}%</span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <!-- ── CHARTS ROW ── -->
 <div class="row g-4 mb-4">
